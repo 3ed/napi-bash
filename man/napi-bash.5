@@ -17,7 +17,10 @@ Czy nadpisywać już pobrane napisy? Jeżeli 0 lub puste, doda liczbę od 0 do 9
 Gdy plik z napisami istnije, pominie pobieranie. #0/1
 .SS subcp_conv=""
 Automatyczne konwertowanie napisów do podanej strony kodowej. Zostaw puste by wyłączyć lub użyj: "WINDOWS-1250"; "ISO-8859-2"; "UTF8".
-.SS videoext='^(3gp|avi|asf|divx|m4v|mkv|mov|mp4|mpe|mpeg|mpg|ogg|ogv|rmvb|wmv|qt)$'
+.SS
+.nf
+videoext='^(3gp|avi|asf|divx|m4v|mkv|mov|mp4|mpe|mpeg|mpg|ogg|ogv|rmvb|wmv|qt)$'
+.fi
 Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter.
 .SS DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
 Agent pobierania plików (%o wyjściowy; %u adres url)
