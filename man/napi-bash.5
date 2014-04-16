@@ -1,0 +1,108 @@
+.\" Manpage for napi-bash.conf.
+.TH NAPI-BASH 5 "2013-06-13" "0.31" "Konfiguracja napi-bash"
+.SH NAZWA
+Konfiguracja programu napi-bash..
+.SH LOKALIZACJA
+${XDG_CONFIG_HOME}/napi-bash/config
+.br
+~/.config/napi-bash/config
+.SH OPIS
+Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanymi w nim domyślne opcje i niektóre funkcje..
+.SH OPCJE KONFIGURACYJNE
+.SS subext="txt"
+Rozszerzenie pliku napisów np. gdy opcja jest ustawiona na "txt" dla pliku /cos/film.avi napisy zostaną zapisane jako /cos/film.txt
+.SS suboverwrite="1"
+Czy nadpisywać już pobrane napisy? Jeżeli 0 lub puste, doda liczbę od 0 do 99 przed rozszerzenie, w zależności od tego czy plik już istnieje (dopiero nazwa.99.txt będzie nadpisywany)
+.SS subskipifexist="0"
+Gdy plik z napisami istnije, pominie pobieranie. #0/1
+.SS subcp_conv=""
+Automatyczne konwertowanie napisów do podanej strony kodowej. Zostaw puste by wyłączyć lub użyj: "WINDOWS-1250"; "ISO-8859-2"; "UTF8".
+.SS videoext='^(3gp|avi|asf|divx|m4v|mkv|mov|mp4|mpe|mpeg|mpg|ogg|ogv|rmvb|wmv|qt)$'
+Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter.
+.SS DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
+Agent pobierania plików (%o wyjściowy; %u adres url)
+.SS msg_status[0]="%2%bPobrano%R dla %i%f"
+.SS msg_status[1]="%1%bBrak napisów%R dla %i%f"
+.SS msg_status[2]="%1Brak uprawnień do zapisu w folderze z plikiem: %f"
+.SS msg_status[3]="%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f"
+.SS msg_status[254]="%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego.."
+.SS msg_status[255]="%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?"
+Format wyjścia dla notyfikacji "Status". Notyfikacja pojawia się za każdym razem gdy program zakończył operacje dla pojedyńczego pliku, chyba że wyłączono w `msg_{cli,gui}_disabled_array'. Zobacz też sekcje
+.B TAGI.
+.SS msg_cli_disabled_array=()
+.SS msg_gui_disabled_array=(0 1)
+Wyłącz info dla następujących treści (patrz na msg_status) #tablica id
+.br
+Uwaga: 0 i 1 mogą być męczące w Gnome3 (domyślnie wyłączone)
+.SS msg_raport=""
+Format wyjścia dla notyfikacji "Raport". Notyfikacja pojawia się tylko raz tuż po wykonaniu wszystkich zadań podsumowując je, chyba że wyłączono w `raport_{cli,gui}_enabled'. Zobacz też sekcje
+.B TAGI.
+.SS raport_cli_enabled=1
+.SS raport_gui_enabled=1
+Wyświetlaj raport końcowy (fałsz/prawda) #0/1
+.SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
+.B Modyfikujesz na własną odpowiedzialność!
+.SS gui_msg_fmt="gui_xml"
+.SS cli_msg_fmt="cli_esc"
+.SS gui_raport_fmt="gui_xml"
+.SS cli_raport_fmt="cli_esc"
+Domyślne moduły parsowania tagów formatowania tekstu. użytkownik może stworzyć własne. Należy pamiętać że aby nie tworzyć konfliktów z modułami parsowania tagów informacji, powinno się używać tylko następujących tagów: %b, %i, %u, %B, %I, %U, %R, %[0-9]. Aby napisać inny format, stwórz funkcję _fmt_fields_nowy_format i nadpisz zmienną, np: gui_msg_fmt="nowy_format".
+.SS gui_msg() {}
+Jeżeli użytkownik chce podmienić libnotify na np. zenity, może to zrobić nadpisująć tą funkcję swoją własną. Pierwszy parametr to typ czyli [0-255] lub "raport". Drugi parametr to treść.
+.SS custom_raport_msg() {}
+Za pomocą tej funkcji użytkownik może podmienić treść raportu na np. bardziej treściwy niż jest to możliwe przy użyciu zmiennej `msg_raport'. Gdyby jednak twoja funkcja nie działała prawidłowo to po return większym niż jeden, tekst nie zostanie nadpisany. Kombinajca z gui_msg powinna dać interesujące możliwości. Podstawowe zmienne to $files (nazwy plików), $file_stat (ich status).
+.SH TAGI
+.SS Tagi dla msg_raport:
+%d ilość pomyślnie pobranych napisów,
+.br
+%n ilość noepobranych napisów,
+.br
+%a ilość wszystkich razem.
+.SS Tagi dla msg_status:
+%d id pliku,
+.br
+%f nazwa plik,
+.br
+%e numer błędu.
+.SS Wspólne tagi:
+%b czcionka pogrubiona,
+.br
+%i czcionka pochylona,
+.br
+%u czcionka podkreślona,
+.br
+%0 kolor czarny,
+.br
+%1 kolor czerwony,
+.br
+%2 kolor zielony,
+.br
+%3 kolor żółty,
+.br
+%4 kolor niebieski,
+.br
+%5 kolor pomarańczowy,
+.br
+%6 kolor wyblakło-niebieski,
+.br
+%7 kolor biały,
+.br
+%8 domyślny kolory czcionki,
+.br
+%9 domyślny kolory czcionki.
+.SH BŁĘDY
+Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projektu.
+.SH ZOBACZ TEŻ
+.BR napi-bash (1)
+.SH AUTORZY
+Krzysztof (3ED) AS  -- krzysztof1987  [na]  gmail  [kropka]  com
+.PP
+Strona projektu: http://code.google.com/p/napi-bash/
+.PP
+.B Program został wykonany przy użyciu tych narzędzi:
+    bash      - 99.(9)% całego kodu
+    curl      - domyślny agent pobierania
+    dd        - wczytywanie określonej ilości bajtów pliku
+    libnotify - wyświetlanie komunikatów na pulpicie
+    md5sum    - sumy kontrolne md5
+.fi

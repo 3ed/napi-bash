@@ -1,0 +1,37 @@
+.\" Manpage for napi-bash.
+.TH NAPI-BASH 1 "2013-06-13" "0.31" "napi-bash"
+.SH NAZWA
+napi-bash - pobieranie polskich napisów do filmów..
+.SH SKŁADNIA
+napi-bash [opcje] <plik/folder> [kolejne pliki/foldery]
+.br
+napi-bash <-h|--help>
+.SH OPIS
+napi-bash to program do pobierania polskich napisów z serwerów napi-projectu.
+.SH OPCJE
+.SS -o=<0/1>, --suboverwrite=<0/1>, --(no-)suboverwrite
+Nadpisuj pliki: 0=nie; 1=tak (domyślnie: 0)
+.SS -s=<0/1>, --skipifexist=<0/1>, --(no-)skipifexist
+Pomijaj pobrane gdy plik z napisami już istnieje: 0=nie; 1=tak (domyślnie: 0)
+.SS -c=<0/1>|--colors=<0/1>|--(no-)colors
+Używaj kolorów: 0=nie; 1=tak (domyślnie: 1)
+.SS -x=<tekst>, --subext=<tekst>
+Rozszerzenie pliku (domyślnie: txt)
+.SS -h, --help, --usage
+Wyświetl pomoc
+.SH BŁĘDY
+Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projektu.
+.SH ZOBACZ TEŻ
+.BR napi-bash (5)
+.SH AUTORZY
+Krzysztof (3ED) AS  -- krzysztof1987  [na]  gmail  [kropka]  com
+.PP
+Strona projektu: http://code.google.com/p/napi-bash/
+.PP
+.B Program został wykonany przy użyciu tych narzędzi:
+    bash      - 99.(9)% całego kodu
+    curl      - domyślny agent pobierania
+    dd        - wczytywanie określonej ilości bajtów pliku
+    libnotify - wyświetlanie komunikatów na pulpicie
+    md5sum    - sumy kontrolne md5
+.fi

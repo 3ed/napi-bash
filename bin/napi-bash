@@ -1,0 +1,637 @@
+#!/bin/bash
+declare -r VERSION="0.31.1"
+declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
+
+subext="txt"
+suboverwrite=0
+subskipifexist=0
+subcode_utf8=0   # TODO usuń w nowszej niż 0.31
+subcode_cp1250=0 # TODO usuń w nowszej niż 0.31
+use_colors=1
+videoext='^(3gp|avi|asf|divx|m4v|mkv|mov|mp4|mpe|mpeg|mpg|ogg|ogv|rmvb|wmv|qt)$'
+DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
+msg_raport="Łącznie pobranych napisów: %b%d/%a%B"
+msg_status[0]="%2%bPobrano%R dla %i%f"
+msg_status[1]="%1%bBrak napisów%R dla %i%f"
+msg_status[2]="%1Brak uprawnień do zapisu w folderze z plikiem: %f"
+msg_status[3]="%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f"
+msg_status[254]="%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego.."
+msg_status[255]="%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?"
+msg_gui_disabled_array=(0 1)
+msg_cli_disabled_array=()
+raport_gui_enabled=1
+raport_cli_enabled=1
+
+gui_msg_fmt="gui_xml"
+cli_msg_fmt="cli_esc"
+gui_raport_fmt="gui_xml"
+cli_raport_fmt="cli_esc"
+
+gui_msg() {
+  # 1 = type
+  # 2 = msg
+  if [ "$1" = "raport" ]; then
+    notify-send -c "transfer.complite" -t 5000 -i "text-x-generic" "napi-bash" "$2"
+  elif [ "$1" = "0" ]; then
+    notify-send -c "transfer" -t 5000 -i "info" "napi-bash" "$2"
+  else
+    notify-send -c "transfer.error" -t 5000 -i "dialog-warning" "napi-bash: problem" "$2"
+  fi
+}
+
+custom_raport() {
+  return 1
+}
+
+
+#-------------------------------------------------------------------------------
+#  Ładowanie konfiguracji..
+#-------------------------------------------------------------------------------
+
+[ -f "$config" -a -r "$config" ] && . "$config"
+
+#-------------------------------------------------------------------------------
+#  Podstawowe funkcje..
+#-------------------------------------------------------------------------------
+msg() {
+  __print "0;32;1" "==>" "0;1" "$1"
+}
+msg2() {
+  __print "0;34" "  -->" "0" "$1"
+}
+
+info() {
+  __print "0;35;1" "Info:" "0" "$1"
+  return 1
+}
+warn() {
+  __print "0;33;1" "Uwaga:" "0" "$1" >&2
+  return 1
+}
+error() {
+  __print "0;31;1" "Błąd:" "0" "$1" >&2
+  return 1
+}
+__print() {
+  if [ "${use_colors:-1}" = "1" ]; then
+    printf "\e[%sm%s\e[%sm %s...\e[0m\n" "$@"
+  else
+    printf "%s %s...\n" "$2" "$4"
+  fi
+}
+
+enabled() {
+  if [ "${1:-0}" = "0" ]; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+usage() {
+  cat << EOF
+Napi-bash wersja $VERSION | 3ED <krzysztof1987@gmail.com>
+
+Użycie:
+  napi-bash [opcje] <plik/folder> [kolejne pliki/foldery]
+  napi-bash <-h|--help>
+
+Opcje:
+  -o=<0/1>, --suboverwrite=<0/1>, --(no-)suboverwrite
+      Nadpisuj pliki: 0=nie; 1=tak (ustawione: $suboverwrite)
+
+  -s=<0/1>, --skipifexist=<0/1>, --(no-)skipifexist
+      Pomijaj pobrane: 0=nie; 1=tak (ustawione: $subskipifexist)
+
+  -c=<0/1>|--colors=<0/1>|--(no-)colors
+      Używaj kolorów: 0=nie; 1=tak (ustawione: $use_colors)
+
+  -x=<str>, --subext=<str>
+      Rozszerzenie pliku (ustawione: $subext)
+
+  -h, --help, --usage
+      Wyświetl pomoc
+
+Aby dowiedzieć się więcej, zobacz: man 1 napi-bash
+
+Napi-bash opublikowano na licencji GPL3:
+  This program comes with  ABSOLUTELY NO WARRANTY;
+  This program may be  freely redistributed  under
+  the terms of the GNU GPL 3. For more information
+  read:   http://www.gnu.org/licenses/gpl-3.0.html
+EOF
+
+	exit 1
+}
+
+#-------------------------------------------------------------------------------
+#  Pobieranie argumentów, wyszkiwanie i badanie plików..
+#-------------------------------------------------------------------------------
+get_ARGV() {
+  local i opt subopt
+  local -a paths
+
+  until [ -z "$1" ]; do
+    opt="$1"; shift
+    case "${opt}" in
+      -h|--help|--usage) usage ;;
+      -o=1|--suboverwrite=1|--suboverwrite)    suboverwrite=1 ;;
+      -o=0|--suboverwrite=0|--no-suboverwrite) suboverwrite=0 ;;
+      -s=1|--skipifexist=1|--skipifexist)    subskipifexist=1 ;;
+      -s=0|--skipifexist=0|--no-skipifexist) subskipifexist=0 ;;
+      -c=1|--colors=1|--colors)    use_colors=1;;
+      -c=0|--colors=0|--no-colors) use_colors=0;;
+      -x=*|--subext=*) subext="${opt#*=}" ;;
+      --) break ;;
+      *) paths+=("$opt")
+    esac
+  done
+  until [ -z "$1" ]; do
+    paths+=("$1")
+    shift
+  done
+
+  # OSTRZERZENIE O NIEAKTUALNOŚCI OPCJI - OBSŁUGA ZNIKNIE W NOWSZEJ WERSJI! TODO Usuń w nowszej niż 0.31
+  if [ -z "$subcp_conv" ] && [ "${subcode_utf8:-0}" = "1" -o "${subcode_cp1250:-0}" = "1" ]; then
+    warn "opcje 'subcode_*' są przestarzałe, zastąp opcją 'subcp_conv'"
+    test "${subcode_utf8:-0}" = "1" && subcp_conv=u
+    test "${subcode_cp1250:-0}" = "1" && subcp_conv=w
+  fi
+  test -z "$subcp_conv" || checkbin_iconv
+  checkbin_7z || exit 1
+
+  msg "Generowanie listy plików"
+
+  # Pliki/katalogi..
+  for i in "${paths[@]}"; do
+    if [ -d "$i" ]; then
+      get_ARGV__get_filelist_from_dir_recursively "$i"
+    else
+      get_ARGV__add_video_to_filelist "$i"
+    fi
+  done
+
+  if [ "${#files[@]}" -le "0" ]; then
+   info "Brak plików lub odrzucone przez filtr"
+   exit
+ else
+   msg "Wyszukiwanie napisów"
+ fi
+}
+
+get_ARGV__bad_arg() {
+  error "Brakujący lub niepoprawny argument dla '$1'"
+  exit 1
+}
+
+get_ARGV__get_filelist_from_dir_recursively() {
+  local i
+
+  while IFS= read -r -u4 -d $'\0' i; do
+    get_ARGV__add_video_to_filelist "$i"
+  done 4< <(find "$1" -type f -print0)
+}
+
+get_ARGV__add_video_to_filelist() {
+  test -f "$1" -a -r "$1" \
+    && local ext="${1##*.}" \
+    && [[ "${ext,,}" =~ $videoext ]] \
+    && local size="`stat -c %s "$1"`" \
+    && test "$size" -ge "10485760" \
+    || return 1
+
+  enabled "$subskipifexist" \
+    && [ -f "${1%.*}.$subext" ] \
+    && return 0
+
+    files+=("$1")
+}
+
+
+#-------------------------------------------------------------------------------
+#  Obsłóga błędów i raporty
+#-------------------------------------------------------------------------------
+##### "enable" checker #####
+napi_msg__enabled__gui() {
+  if [ "$DISPLAY" = "" ]; then
+    return 1
+  fi
+
+  if [ "$1" = "raport" ]; then
+    enabled "$raport_gui_enabled" && return 0 || return 1
+  fi
+
+  local var
+  for var in "${msg_gui_disabled_array[$@]}"; do
+    test "$var" = "$1" -o "$var" = "@" && return 1
+  done
+  return 0
+}
+napi_msg__enabled__cli() {
+  if [ "$1" = "raport" ]; then
+    enabled "$raport_cli_enabled" && return 0 || return 1
+  fi
+
+  local var
+  for var in "${msg_cli_disabled_array[$@]}"; do
+    test "$var" = "$1" -o "$var" = "@" && return 1
+  done
+  return 0
+}
+
+##### main fields filler (tag replace) #####
+fill_fields() {
+  local ini="$1"
+  local fmt="$2"
+  local msg="$3"
+  shift 3
+
+  local -i c=0
+
+  for ((c=0; $c < ${#msg}; c++)); do
+    ch="${msg:c:1}"
+    if [ "$ch" = "%" ]; then
+      let c++
+      _ini_fields_$ini "$fmt" "${msg:c:1}" "$@"
+    else
+      echo -n "$ch"
+    fi
+  done
+
+  _fmt_fields_$fmt "R"
+  echo
+}
+
+# ini fields (put the information)
+_ini_fields_msg() {
+  case "$2" in
+    f) echo -n "${files[$3]##*/}";;
+    d) echo -n "$3";;
+    e) echo -n "$4";;
+    %) echo -n "%";;
+    *) _fmt_fields_$1 "$2"
+  esac
+}
+_ini_fields_raport() {
+  local -i d=0 n=0 a=0
+
+  for ((a=0; $a < "${#files_stat[@]}"; a++)); do
+    test "${files_stat[$a]}" = "0" && let d++ || let n++
+  done
+
+  case "$2" in
+    d) echo -n "$d";;
+    n) echo -n "$n";;
+    a) echo -n "$a";;
+    %) echo -n "%";;
+    *) _fmt_fields_$1 "$2"
+  esac
+}
+
+# format fields (formating output)
+_fmt_fields_cli_esc() {
+  test "${use_colors:-1}" = "1" || return
+
+  case "$1" in
+    [0-7]) __CLIFMT[0]=";3$1";;
+    b) __CLIFMT[1]=";1";;
+    i) __CLIFMT[2]=";3";;
+    u) __CLIFMT[3]=";4";;
+    [8-9]) unset __CLIFMT[0];;
+    B) unset __CLIFMT[1];;
+    I) unset __CLIFMT[2];;
+    U) unset __CLIFMT[3];;
+    R) unset __CLIFMT;;
+    *) return;;
+  esac
+
+  echo -en "\e[0${__CLIFMT[1]}${__CLIFMT[2]}${__CLIFMT[3]}${__CLIFMT[0]}m"
+}
+_fmt_fields_gui_xml() {
+  local c
+  case "$1" in
+    b|i|u)
+      local canset=1
+      for ((c=0; $c < ${#__GUIFMT}; c++)); do
+        test "${__GUIFMT:$c:1}" = "$1" && canset=0
+      done
+      test "$canset" = "1" || return
+      echo -n "<$1>" && __GUIFMT+="$1"
+    ;;
+    B|I|U)
+      local stupidxml_left="" stupidxml_right="" stupidxml_tag="" canunset=0 new_GUIFMT=""
+      for ((c=0; $c < ${#__GUIFMT}; c++)); do
+        stupidxml_tag="${__GUIFMT:$c:1}"
+        if [ "$stupidxml_tag" = "${1,}" ]; then
+          canunset=1
+        else
+          new_GUIFMT="$stupidxml_tag"
+          stupidxml_right+="<$stupidxml_tag>"
+        fi
+      done
+      test "$canunset" = "1" || return
+
+      for ((c=$[${#__GUIFMT}-1]; $c >= 0; c--)); do
+        stupidxml_left+="</${__GUIFMT:$c:1}>"
+      done
+
+      __GUIFMT="$new_GUIFMT"
+
+      echo -n "$stupidxml_left$stupidxml_right"
+    ;;
+    R)
+      for ((c=$[${#__GUIFMT}-1]; $c >= 0; c--)); do
+        echo -n "</${__GUIFMT:$c:1}>"
+      done
+      unset __GUIFMT
+    ;;
+    *) return;;
+  esac
+}
+
+##### main message functions #####
+napi_msg() {
+  [ -z "$1" -o -z "$2" ] && return 1
+  [ "$USERBREAK" = "1" ] && return 0
+
+  # $1 = id pliku
+  # $2 = id błędu
+
+  local msg
+
+  files_stat[$1]=$2
+
+  test -n "${msg_status[$2]}" \
+    && msg="${msg_status[$2]}" \
+    || msg="Status #%e dla: %f"
+
+  napi_msg_cli "$msg" "$@"
+  napi_msg_gui "$msg" "$@"
+
+  test "$2" -lt "200" || exit 1
+  return $2
+}
+napi_msg_gui() {
+  napi_msg__enabled__gui "$3" || return 0
+  fill_fields "msg" "$gui_msg_fmt" "$@" | gui_msg "$3" "`cat`" &
+}
+napi_msg_cli() {
+  napi_msg__enabled__cli "$3" || return 0
+  if [ "$3" = "0" ]; then
+    fill_fields "msg" "$cli_msg_fmt" "$@"
+  else
+    fill_fields "msg" "$cli_msg_fmt" "$@" >&2
+  fi
+}
+napi_raport() {
+  local msg
+
+  if ! msg="`custom_raport`"; then
+    msg="${msg_raport:-"Łącznie pobrano %i/%a napisów..."}"
+  fi
+
+  napi_raport_cli "$msg"
+  napi_raport_gui "$msg"
+}
+napi_raport_gui() {
+  napi_msg__enabled__gui "raport" || return 0
+  fill_fields "raport" "$gui_raport_fmt" "$@" | gui_msg "raport" "`cat`" &
+}
+napi_raport_cli() {
+  napi_msg__enabled__cli "raport" || return 0
+  msg "Raport"
+  fill_fields "raport" "$cli_raport_fmt" "$@"
+}
+
+#-------------------------------------------------------------------------------
+#  Generowanie sum kontrolnych
+#-------------------------------------------------------------------------------
+__gen_md5_sums() {
+    test -n "$1" || return 1
+    local md5
+
+  	md5="$(dd bs=10485760 count=1 if="${files[$1]}" 2> /dev/null|md5sum)" || return 1
+    md5=${md5%% *}
+
+    test ${md5//[^0-9a-f]/} = $md5 || return 1
+    test ${#md5} = 32 || return 1
+
+    echo $1 $md5 >&3
+}
+
+__gen_napi_sums() {
+  # Komuś chyba się nudziło...
+	if [ -z "$1" ]; then return 1; fi
+
+	local md5 napi idx mul add n a p i s y
+
+	md5="$1"
+
+	idx=("14" "3"  "6"  "8"  "2")
+	mul=("2"  "2"  "5"  "4"  "3")
+	add=("0"  "13" "16" "11" "5")
+
+	for p in ${!idx[*]}; do
+		n="${add[p]}"
+		a="${mul[p]}"
+		p="${idx[p]}"
+
+    i="$[n + $(printf "%d" "0x${md5:p:1}")]"
+		s="$(printf "%d" "0x${md5:i:2}")"
+		y="$(printf "%x" "$[s*a]")"
+
+		napi+="${y:${#y}-1:1}"
+	done
+
+  echo $napi
+}
+
+fork__gen_md5_sums() {
+  local c
+
+  for ((c=0; $c < ${#files[@]}; c++)); do
+    __gen_md5_sums "$c" || napi_msg "$c" "$?"
+  done
+
+  echo bye >&3
+}
+
+napi_poll() {
+  while read -a childARG; do
+    test "${childARG[0]}" = "bye" && break
+    napi_downloader "${childARG[@]}"; napi_msg "${childARG[0]}" "$?"
+  done <&3
+}
+
+
+
+#-------------------------------------------------------------------------------
+#  Pobieranie napisów
+#-------------------------------------------------------------------------------
+napi_downloader() {
+  test -n "$1" -a -n "$2" || return 1
+
+  local md5="$2"
+  local napi="$(__gen_napi_sums "$md5")" || return 1
+  local path="${files[$1]}"
+  local npath="${path%.*}"
+  local dlcmd="$DLAGENT"
+  local dlfile="/tmp/napis.$md5.7z"
+	local url="http://napiprojekt.pl/unit_napisy/dl.php?l=${napi_lang:-"PL"}&f=${md5}&t=${napi}&v=other&kolejka=false&nick=${napi_nick}&pass=${napi_pass}&napios=posix"
+
+
+  # ILITERACJA W NAZWIE W PRZYPADKU BRAKU PRZYWOLENIA NA NADPIS
+  if [ -e "$npath.$subext" -a "$suboverwrite" == "0" ]; then
+    local -i c
+    for ((c=0; $c < 100; c++)); do
+      test -f "$npath.$c.$subext" || break
+    done
+    npath="$npath.$c"
+  fi
+
+  # POBIERANIE ARCHIWUM 7Z Z NAPISAMI
+  # (niestety ograniczenia 7z sprawiają że musi być plik)
+  if [[ $dlcmd = *%o* ]]; then
+		dlcmd=${dlcmd//\%o/\"$dlfile\"}
+  else
+    return 254
+	fi
+  if [[ $dlcmd = *%u* ]]; then
+		dlcmd=${dlcmd//\%u/\"$url\"}
+	else
+		dlcmd="$dlcmd \"$url\""
+	fi
+
+  local ret=0
+	eval "$dlcmd || ret=\$?"
+	if [ "$ret" != "0" ]; then
+		test -f "$dlfile" && unlink "$dlfile"
+		return 255
+	fi
+
+  # ROZPAKOWYWANIE NAPISÓW DO ZMIENNEJ
+  local subtitle="$("$BIN_7z" x -y -so -piBlm8NTigvru0Jr0 "$dlfile" 2>/dev/null)"
+  test -f "$dlfile" && unlink "$dlfile"
+
+  # ZMIENNA JEST PUSTA - BRAK NAPISÓW
+  [ -n "$subtitle" ] || return 1
+
+  # NIE DA SIĘ UTWORZYĆ PLIKU - ZASÓB TYLKO DO ODCZYTU
+  touch "$npath.$subext"
+  if [ ! -e "$npath.$subext" ]; then
+    return 2
+  fi
+
+  # PORÓWNYWANIA STRON KODOWYCH
+  local subcp_conv_from="" subcp_conv_to=""
+
+  if [ -n "$subcp_conv" ]; then
+    case "${subcp_conv:0:1}" in
+      [Uu]) subcp_conv_to="UTF8";;
+      [Ii]) subcp_conv_to="ISO-8859-2";;
+      [Ww]) subcp_conv_to="WINDOWS-1250";;
+    esac
+
+    if [ -n "$subcp_conv_to" ] \
+      && local encodingtype="$(file \
+        --brief \
+        --mime-encoding \
+        --exclude apptype \
+        --exclude tokens \
+        --exclude cdf \
+        --exclude compress \
+        --exclude elf \
+        --exclude soft \
+        --exclude tar \
+        - <<< "$subtitle")" \
+      && [ -n "$encodingtype" ]
+    then
+      case "${encodingtype,,}" in
+        *utf*) subcp_conv_from="UTF8";;
+        *iso*) subcp_conv_from="ISO-8859-2";;
+        *ascii*) subcp_conv_to="";;
+        *) subcp_conv_from="WINDOWS-1250";;
+      esac
+    else
+      subcp_conv_to=""
+      subcp_conv_from=""
+    fi
+  fi
+
+  # PORÓWNYWANIE STRON KODOWYCH I ZAPIS
+  #-------------------------------------
+  # Schemat postępowania: sprawdź czy istnieje potrzeba konwertowania
+  #   nie) tylko catnij
+  #   tak) przekonwertuj do pliku i w razie błędu nadpisz catem
+  test "$subcp_conv_to" != "$subcp_conv_from" \
+    && "$BIN_iconv" -f "$subcp_conv_from" -t "$subcp_conv_to" > "$npath.$subext" 2> /dev/null <<< "$subtitle" \
+    || cat > "$npath.$subext" 2> /dev/null <<< "$subtitle"
+
+  # GDY PLIK JEST PUSTY
+  if [ ! -s "$npath.$subext" ]; then
+    unlink "$npath.$subext"
+    return 3
+  fi
+
+  # WSZYSTKO POSZŁO DOBRZE
+  return 0
+}
+
+
+#-------------------------------------------------------------------------------
+#  Sprawdzanie
+#-------------------------------------------------------------------------------
+#login_check() {
+#  "http://www.napiprojekt.pl/users_check.php?nick=%s&pswd=%s"
+#}
+
+checkbin_iconv() {
+  if ! BIN_iconv="$(findbin iconv)"; then
+    subcp_conv=""
+    warn "Aby móc korzystać z opcji subcp_conv, zainstaluj iconv"
+  fi
+}
+
+checkbin_7z() {
+  if ! BIN_7z="$(findbin 7z 7za)"; then
+    error "Aby móc rozpakować archiwum z napisami zainstaluj p7zip"
+  fi
+}
+
+findbin() {
+  local line
+  while [ -n "$1" ]; do
+    while read -d: line; do
+      if [ -x "$line/$1" ]; then
+        echo "$line/$1"
+        return 0
+      fi
+    done <<< "$PATH"
+    shift
+  done
+  return 1
+}
+
+#-------------------------------------------------------------------------------
+#  Główny kod / main()
+#-------------------------------------------------------------------------------
+# main() {
+fifo="$(mktemp -t -u napi-bash.$$.XXXXXX)"
+USERBREAK=0
+
+# Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
+# do komunikacji pomiędzy forkiem a rodzicem
+mkfifo "$fifo"
+exec 3<>"$fifo"
+
+# Obsługa sygnałów / czyszczenie
+trap 'kill $childPID &> /dev/null; rm -f "$fifo"' EXIT
+trap 'USERBREAK=1; kill $childPID &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
+
+get_ARGV "${@}"
+fork__gen_md5_sums & childPID=$!
+napi_poll    # { child > fifo } & { poll < fifo }
+napi_raport
+
+exit 0
+# }

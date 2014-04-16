@@ -1,0 +1,23 @@
+------------------------
+   OPCJE INSTALACYJNE
+------------------------
+Domyślne opcje:
+  PREFIX="/usr/local"
+  MANPREFIX="$(PREFIX)/share"
+  DESTDIR=""
+
+------------------------
+       INSTALACJA
+------------------------
+Przykład:
+  make install PREFIX=/usr
+
+Patrz: OPCJE INSTALACYJNE..
+
+------------------------
+      DEINSTALACJA
+------------------------
+Przykład:
+  make uninstall PREFIX=/usr
+
+Patrz: OPCJE INSTALACYJNE..
