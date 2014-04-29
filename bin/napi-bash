@@ -613,15 +613,19 @@ findbin() {
 #  Główny kod / main()
 #-------------------------------------------------------------------------------
 # main() {
-fifo="$(mktemp -t -u napi-bash.$$.XXXXXX)"
+
+CACHE="$(mktemp -u -d -p "${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/" $$.XXXX)"
+mkdir -p "$CACHE"
 USERBREAK=0
+
 # Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
 # do komunikacji pomiędzy forkiem a rodzicem
-mkfifo "$fifo"
-exec 3<>"$fifo"
+# kierunek: hash --> main
+mkfifo "$CACHE/hash-main.fifo"
+exec 3<>"$CACHE/hash-main.fifo"
 
 # Obsługa sygnałów / czyszczenie
-trap 'kill $childPID &> /dev/null; rm -f "$fifo"' EXIT
+trap 'kill $childPID &> /dev/null; rm -rf "$CACHE"' EXIT
 trap 'USERBREAK=1; kill $childPID &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
 
 get_ARGV "${@}"
