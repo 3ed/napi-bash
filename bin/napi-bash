@@ -473,7 +473,8 @@ napi_downloader() {
   local path="${files[$1]}"
   local npath="${path%.*}"
   local dlcmd="$DLAGENT"
-  local dlfile="/tmp/napis.$md5.7z"
+  local dlfile="$CACHE/_${md5}_${napi}.7z"
+  local subfile="$CACHE/_${md5}_${napi}.sub"
 	local url="http://napiprojekt.pl/unit_napisy/dl.php?l=${napi_lang:-"PL"}&f=${md5}&t=${napi}&v=other&kolejka=false&nick=${napi_nick}&pass=${napi_pass}&napios=posix"
 
 
@@ -507,11 +508,11 @@ napi_downloader() {
 	fi
 
   # ROZPAKOWYWANIE NAPISÓW DO ZMIENNEJ
-  local subtitle="$("$BIN_7z" x -y -so -piBlm8NTigvru0Jr0 "$dlfile" 2>/dev/null)"
+  "$BIN_7z" x -y -so -piBlm8NTigvru0Jr0 "$dlfile" > "$subfile" 2>/dev/null
   test -f "$dlfile" && unlink "$dlfile"
 
   # ZMIENNA JEST PUSTA - BRAK NAPISÓW
-  [ -n "$subtitle" ] || return 1
+  [ -s "$subfile" ] || return 1
 
   # NIE DA SIĘ UTWORZYĆ PLIKU - ZASÓB TYLKO DO ODCZYTU
   touch "$npath.$subext"
@@ -540,7 +541,7 @@ napi_downloader() {
         --exclude elf \
         --exclude soft \
         --exclude tar \
-        - <<< "$subtitle")" \
+        "${subfile}")" \
       && [ -n "$encodingtype" ]
     then
       case "${encodingtype,,}" in
@@ -561,8 +562,8 @@ napi_downloader() {
   #   nie) tylko catnij
   #   tak) przekonwertuj do pliku i w razie błędu nadpisz catem
   test "$subcp_conv_to" != "$subcp_conv_from" \
-    && "$BIN_iconv" -f "$subcp_conv_from" -t "$subcp_conv_to" > "$npath.$subext" 2> /dev/null <<< "$subtitle" \
-    || cat > "$npath.$subext" 2> /dev/null <<< "$subtitle"
+    && "$BIN_iconv" -f "$subcp_conv_from" -t "$subcp_conv_to" > "$npath.$subext" 2> /dev/null < "$subfile" \
+    || cat > "$npath.$subext" 2> /dev/null < "$subfile"
 
   # GDY PLIK JEST PUSTY
   if [ ! -s "$npath.$subext" ]; then
