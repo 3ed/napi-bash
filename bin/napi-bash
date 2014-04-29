@@ -112,6 +112,9 @@ Opcje:
   -x=<str>, --subext=<str>
       Rozszerzenie pliku (ustawione: $subext)
 
+  --debug=<plik>
+      Tryb debugowy
+
   -h, --help, --usage
       Wyświetl pomoc
 
@@ -145,6 +148,13 @@ get_ARGV() {
       -c=1|--colors=1|--colors)    use_colors=1;;
       -c=0|--colors=0|--no-colors) use_colors=0;;
       -x=*|--subext=*) subext="${opt#*=}" ;;
+      --debug=*)
+        local debug_log="${opt#*=}"
+        exec 2>&-;
+        exec 2<>"${debug_log:-"napi-bash.debug.log"}";
+        set -x;
+        PS4='+ [${LINENO}] ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+      ;;
       --) break ;;
       *) paths+=("$opt")
     esac
