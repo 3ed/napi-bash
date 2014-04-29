@@ -21,6 +21,7 @@ msg_gui_disabled_array=(0 1)
 msg_cli_disabled_array=()
 raport_gui_enabled=1
 raport_cli_enabled=1
+gui_int_warn=1
 
 gui_msg_fmt="gui_xml"
 cli_msg_fmt="cli_esc"
@@ -66,10 +67,12 @@ info() {
 }
 warn() {
   __print "0;33;1" "Uwaga:" "0" "$1" >&2
+  test -n "$DISPLAY" && enabled "$gui_int_warn" && gui_msg "warn" "$1" &> /dev/null &
   return 1
 }
 error() {
   __print "0;31;1" "Błąd:" "0" "$1" >&2
+  test -n "$DISPLAY" && gui_msg "error" "$1" &> /dev/null &
   return 1
 }
 __print() {
@@ -151,12 +154,6 @@ get_ARGV() {
     shift
   done
 
-  # OSTRZERZENIE O NIEAKTUALNOŚCI OPCJI - OBSŁUGA ZNIKNIE W NOWSZEJ WERSJI! TODO Usuń w nowszej niż 0.31
-  if [ -z "$subcp_conv" ] && [ "${subcode_utf8:-0}" = "1" -o "${subcode_cp1250:-0}" = "1" ]; then
-    warn "opcje 'subcode_*' są przestarzałe, zastąp opcją 'subcp_conv'"
-    test "${subcode_utf8:-0}" = "1" && subcp_conv=u
-    test "${subcode_cp1250:-0}" = "1" && subcp_conv=w
-  fi
   test -z "$subcp_conv" || checkbin_iconv
   checkbin_7z || exit 1
 
@@ -593,7 +590,7 @@ checkbin_iconv() {
 }
 
 checkbin_7z() {
-  if ! BIN_7z="$(findbin 7z 7za)"; then
+  if ! BIN_7z="$(findbin 7za 7z)"; then
     error "Aby móc rozpakować archiwum z napisami zainstaluj p7zip"
   fi
 }
@@ -618,7 +615,6 @@ findbin() {
 # main() {
 fifo="$(mktemp -t -u napi-bash.$$.XXXXXX)"
 USERBREAK=0
-
 # Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
 # do komunikacji pomiędzy forkiem a rodzicem
 mkfifo "$fifo"
