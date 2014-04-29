@@ -1,12 +1,10 @@
 #!/bin/bash
-declare -r VERSION="0.31.1"
+declare -r VERSION="0.32"
 declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
 
 subext="txt"
 suboverwrite=0
 subskipifexist=0
-subcode_utf8=0   # TODO usuń w nowszej niż 0.31
-subcode_cp1250=0 # TODO usuń w nowszej niż 0.31
 use_colors=1
 videoext='^(3gp|avi|asf|divx|m4v|mkv|mov|mp4|mpe|mpeg|mpg|ogg|ogv|rmvb|wmv|qt)$'
 DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
