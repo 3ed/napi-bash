@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r VERSION="0.32"
+declare -r VERSION="0.40-next"
 declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
 
 subext="txt"
@@ -451,17 +451,64 @@ __gen_napi_sums() {
   echo $napi
 }
 
-fork__gen_md5_sums() {
-  local c
+fork__hash() {
+  local c md5
 
   for ((c=0; $c < ${#files[@]}; c++)); do
-    __gen_md5_sums "$c" || napi_msg "$c" "$?"
+    md5="$(__gen_md5_sums "$c")"; ret=$?
+    if [ "$ret" != "0" ]; then
+      napi_msg "$c" "$?"
+      continue
+    fi
+    napi="$(__gen_napi_sums "$md5")"; ret=$?
+    if [ "$ret" != "0" ]; then
+      napi_msg "$c" "$?"
+      continue
+    fi
+    echo "$c $md5 $napi" >&5
   done
 
-  echo bye >&3
+  echo bye >&5
+}
+
+fork__download() {
+  local ret=0
+  while read -a childARG; do
+    test "${childARG[0]}" = "bye" && break
+
+    __download "${childARG[@]}"; ret=$?
+    if [ "$?" = "0" ]; then
+      echo "${childARG[@]}" >&4
+    else
+      napi_msg "${childARG[0]}" "$ret"
+    fi
+  done <&5
+}
+
+fork__post() {
+  while read -a childARG; do
+    test "${childARG[0]}" = "bye" && break
+    __post "${childARG[0]}" >&3
+  done <&4
 }
 
 napi_poll() {
+# Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
+# do komunikacji pomiędzy forkiem a rodzicem
+# kierunek: hash --> main
+  mkfifo "$CACHE/hash-download.fifo"
+  exec 5<>"$CACHE/hash-download.fifo"
+
+  mkfifo "$CACHE/download-post.fifo"
+  exec 4<>"$CACHE/download-post.fifo"
+
+  mkfifo "$CACHE/post-main.fifo"
+  exec 3<>"$CACHE/post-main.fifo"
+
+  fork__hash     & childPID+=($!)
+  fork__download & childPID+=($!)
+  fork__post     & childPID+=($!)
+
   while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
     napi_downloader "${childARG[@]}"; napi_msg "${childARG[0]}" "$?"
@@ -473,27 +520,17 @@ napi_poll() {
 #-------------------------------------------------------------------------------
 #  Pobieranie napisów
 #-------------------------------------------------------------------------------
-napi_downloader() {
-  test -n "$1" -a -n "$2" || return 1
 
-  local md5="$2"
-  local napi="$(__gen_napi_sums "$md5")" || return 1
-  local path="${files[$1]}"
+__download() {
+  local fid="$1" md5="$2" napi="$3"
+
+  local path="${files[$fid]}"
   local npath="${path%.*}"
   local dlcmd="$DLAGENT"
   local dlfile="$CACHE/_${md5}_${napi}.7z"
   local subfile="$CACHE/_${md5}_${napi}.sub"
+
 	local url="http://napiprojekt.pl/unit_napisy/dl.php?l=${napi_lang:-"PL"}&f=${md5}&t=${napi}&v=other&kolejka=false&nick=${napi_nick}&pass=${napi_pass}&napios=posix"
-
-
-  # ILITERACJA W NAZWIE W PRZYPADKU BRAKU PRZYWOLENIA NA NADPIS
-  if [ -e "$npath.$subext" -a "$suboverwrite" == "0" ]; then
-    local -i c
-    for ((c=0; $c < 100; c++)); do
-      test -f "$npath.$c.$subext" || break
-    done
-    npath="$npath.$c"
-  fi
 
   # POBIERANIE ARCHIWUM 7Z Z NAPISAMI
   # (niestety ograniczenia 7z sprawiają że musi być plik)
@@ -515,18 +552,37 @@ napi_downloader() {
 		return 255
 	fi
 
-  # ROZPAKOWYWANIE NAPISÓW DO ZMIENNEJ
+  # ROZPAKOWYWANIE NAPISÓW
   "$BIN_7z" x -y -so -piBlm8NTigvru0Jr0 "$dlfile" > "$subfile" 2>/dev/null
   test -f "$dlfile" && unlink "$dlfile"
 
-  # ZMIENNA JEST PUSTA - BRAK NAPISÓW
-  [ -s "$subfile" ] || return 1
-
-  # NIE DA SIĘ UTWORZYĆ PLIKU - ZASÓB TYLKO DO ODCZYTU
-  touch "$npath.$subext"
-  if [ ! -e "$npath.$subext" ]; then
-    return 2
+  # PLIK JEST PUSTY - BRAK NAPISÓW
+  if [ -s "$subfile" ]; then
+    unlink "$subfile"
+    return 1
   fi
+
+  return 0
+}
+
+__post() {
+  local fid="$1" md5="$2" napi="$3"
+
+  sub_convert_cp "$md5" "$napi"
+  sub_convert_fmt "$md5" "$napi"
+
+  sub_install "$fid" "$md5" "$napi"
+
+  return 0
+}
+
+sub_convert_cp() {
+  local md5="$1" napi="$2"
+
+  local subfile="$CACHE/_${md5}_${napi}.sub"
+  local subftmp="$CACHE/_${md5}_${napi}.sub.tmp"
+
+  cat "$subfile" > "$subftmp" # return
 
   # PORÓWNYWANIA STRON KODOWYCH
   local subcp_conv_from="" subcp_conv_to=""
@@ -549,7 +605,7 @@ napi_downloader() {
         --exclude elf \
         --exclude soft \
         --exclude tar \
-        "${subfile}")" \
+        "${subftmp}")" \
       && [ -n "$encodingtype" ]
     then
       case "${encodingtype,,}" in
@@ -570,8 +626,33 @@ napi_downloader() {
   #   nie) tylko catnij
   #   tak) przekonwertuj do pliku i w razie błędu nadpisz catem
   test "$subcp_conv_to" != "$subcp_conv_from" \
-    && "$BIN_iconv" -f "$subcp_conv_from" -t "$subcp_conv_to" > "$npath.$subext" 2> /dev/null < "$subfile" \
-    || cat > "$npath.$subext" 2> /dev/null < "$subfile"
+    && "$BIN_iconv" -f "$subcp_conv_from" -t "$subcp_conv_to" > "$subfile" 2> /dev/null < "$subftmp" \
+    || cat > "$subfile" 2> /dev/null < "$subftmp"
+
+  unlink "$subftmp"
+
+  return 0
+}
+sub_convert_fmt() {
+  echo TODO: sub_convert_fmt: http://code.google.com/p/napi-bash/issues/detail?id=2
+  return 0
+}
+sub_install() {
+  local fid="$1" md5="$2" napi="$3"
+
+  local subfile="$CACHE/_${md5}_${napi}.sub"
+  local npath="${files[$fid]%.*}"
+
+  # ILITERACJA W NAZWIE W PRZYPADKU BRAKU PRZYWOLENIA NA NADPIS
+  if [ -e "$npath.$subext" -a "$suboverwrite" == "0" ]; then
+    local -i c
+    for ((c=0; $c < 100; c++)); do
+      test -f "$npath.$c.$subext" || break
+    done
+    npath="$npath.$c"
+  fi
+
+  cat "$subfile" > "$npath.$subext"
 
   # GDY PLIK JEST PUSTY
   if [ ! -s "$npath.$subext" ]; then
@@ -579,7 +660,6 @@ napi_downloader() {
     return 3
   fi
 
-  # WSZYSTKO POSZŁO DOBRZE
   return 0
 }
 
@@ -627,18 +707,11 @@ CACHE="$(mktemp -u -d -p "${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/" $$.XXX
 mkdir -p "$CACHE"
 USERBREAK=0
 
-# Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
-# do komunikacji pomiędzy forkiem a rodzicem
-# kierunek: hash --> main
-mkfifo "$CACHE/hash-main.fifo"
-exec 3<>"$CACHE/hash-main.fifo"
-
 # Obsługa sygnałów / czyszczenie
 trap 'kill $childPID &> /dev/null; rm -rf "$CACHE"' EXIT
 trap 'USERBREAK=1; kill $childPID &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
 
 get_ARGV "${@}"
-fork__gen_md5_sums & childPID=$!
 napi_poll    # { child > fifo } & { poll < fifo }
 napi_raport
 
