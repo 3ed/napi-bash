@@ -483,13 +483,22 @@ fork__download() {
       napi_msg "${childARG[0]}" "$ret"
     fi
   done <&5
+
+  echo bye >&4
 }
 
 fork__post() {
   while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
-    __post "${childARG[0]}" >&3
+    __post "${childARG[0]}"; ret=$?
+    if [ "$ret" = "0" ]; then
+      echo "${childARG[@]}" >&3
+    else
+      napi_msg "${childARG[0]}" "$ret"
+    fi
   done <&4
+
+  echo bye >&3
 }
 
 napi_poll() {
@@ -511,7 +520,7 @@ napi_poll() {
 
   while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
-    napi_downloader "${childARG[@]}"; napi_msg "${childARG[0]}" "$?"
+    napi_msg "${childARG[0]}" "0"
   done <&3
 }
 
@@ -571,7 +580,7 @@ __post() {
   sub_convert_cp "$md5" "$napi"
   sub_convert_fmt "$md5" "$napi"
 
-  sub_install "$fid" "$md5" "$napi"
+  sub_install "$fid" "$md5" "$napi" || return $?
 
   return 0
 }
@@ -708,8 +717,8 @@ mkdir -p "$CACHE"
 USERBREAK=0
 
 # Obsługa sygnałów / czyszczenie
-trap 'kill $childPID &> /dev/null; rm -rf "$CACHE"' EXIT
-trap 'USERBREAK=1; kill $childPID &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
+trap 'kill ${childPID[@]} &> /dev/null; rm -rf "$CACHE"' EXIT
+trap 'USERBREAK=1; kill ${childPID[@]} &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
 
 get_ARGV "${@}"
 napi_poll    # { child > fifo } & { poll < fifo }
