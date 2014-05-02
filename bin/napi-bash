@@ -421,7 +421,7 @@ __gen_md5_sums() {
     test ${md5//[^0-9a-f]/} = $md5 || return 1
     test ${#md5} = 32 || return 1
 
-    echo $1 $md5 >&3
+    echo $md5
 }
 
 __gen_napi_sums() {
@@ -455,20 +455,12 @@ fork__hash() {
   local c md5
 
   for ((c=0; $c < ${#files[@]}; c++)); do
-    md5="$(__gen_md5_sums "$c")"; ret=$?
-    if [ "$ret" != "0" ]; then
-      napi_msg "$c" "$?"
-      continue
-    fi
-    napi="$(__gen_napi_sums "$md5")"; ret=$?
-    if [ "$ret" != "0" ]; then
-      napi_msg "$c" "$?"
-      continue
-    fi
-    echo "$c $md5 $napi" >&5
+    md5="$(__gen_md5_sums "$c")" \
+      && napi="$(__gen_napi_sums "$md5")"
+    echo "$? $c $md5 $napi" >&4
   done
 
-  echo bye >&5
+  echo bye >&4
 }
 
 fork__download() {
@@ -476,26 +468,10 @@ fork__download() {
   while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
 
-    __download "${childARG[@]}"; ret=$?
-    if [ "$?" = "0" ]; then
-      echo "${childARG[@]}" >&4
-    else
-      napi_msg "${childARG[0]}" "$ret"
-    fi
-  done <&5
+    __download "${childARG[@]}"
+    childARG[0]=$?
 
-  echo bye >&4
-}
-
-fork__post() {
-  while read -a childARG; do
-    test "${childARG[0]}" = "bye" && break
-    __post "${childARG[0]}"; ret=$?
-    if [ "$ret" = "0" ]; then
-      echo "${childARG[@]}" >&3
-    else
-      napi_msg "${childARG[0]}" "$ret"
-    fi
+    echo "${childARG[@]}" >&3
   done <&4
 
   echo bye >&3
@@ -506,21 +482,21 @@ napi_poll() {
 # do komunikacji pomiędzy forkiem a rodzicem
 # kierunek: hash --> main
   mkfifo "$CACHE/hash-download.fifo"
-  exec 5<>"$CACHE/hash-download.fifo"
+  exec 4<>"$CACHE/hash-download.fifo"
 
-  mkfifo "$CACHE/download-post.fifo"
-  exec 4<>"$CACHE/download-post.fifo"
-
-  mkfifo "$CACHE/post-main.fifo"
-  exec 3<>"$CACHE/post-main.fifo"
+  mkfifo "$CACHE/download-main.fifo"
+  exec 3<>"$CACHE/download-main.fifo"
 
   fork__hash     & childPID+=($!)
   fork__download & childPID+=($!)
-  fork__post     & childPID+=($!)
 
   while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
-    napi_msg "${childARG[0]}" "0"
+
+    __post "${childARG[@]}"
+    childARG[0]=$?
+
+    napi_msg "${childARG[1]}" "${childARG[0]}"
   done <&3
 }
 
@@ -531,10 +507,9 @@ napi_poll() {
 #-------------------------------------------------------------------------------
 
 __download() {
-  local fid="$1" md5="$2" napi="$3"
+  test "$1" = "0" || return $1
+  local fid="$2" md5="$3" napi="$4"
 
-  local path="${files[$fid]}"
-  local npath="${path%.*}"
   local dlcmd="$DLAGENT"
   local dlfile="$CACHE/_${md5}_${napi}.7z"
   local subfile="$CACHE/_${md5}_${napi}.sub"
@@ -566,7 +541,7 @@ __download() {
   test -f "$dlfile" && unlink "$dlfile"
 
   # PLIK JEST PUSTY - BRAK NAPISÓW
-  if [ -s "$subfile" ]; then
+  if ! [ -s "$subfile" ]; then
     unlink "$subfile"
     return 1
   fi
@@ -575,7 +550,8 @@ __download() {
 }
 
 __post() {
-  local fid="$1" md5="$2" napi="$3"
+  test "$1" = "0" || return $1
+  local fid="$2" md5="$3" napi="$4"
 
   sub_convert_cp "$md5" "$napi"
   sub_convert_fmt "$md5" "$napi"
@@ -586,25 +562,20 @@ __post() {
 }
 
 sub_convert_cp() {
+  test -n "$subcp_conv" || return 0
   local md5="$1" napi="$2"
 
+  # LOKALIZACJE PLIKÓW
   local subfile="$CACHE/_${md5}_${napi}.sub"
   local subftmp="$CACHE/_${md5}_${napi}.sub.tmp"
 
+  # KOPIA TYMCZASOWA ORYGINAŁU
   cat "$subfile" > "$subftmp" # return
 
-  # PORÓWNYWANIA STRON KODOWYCH
-  local subcp_conv_from="" subcp_conv_to=""
-
-  if [ -n "$subcp_conv" ]; then
-    case "${subcp_conv:0:1}" in
-      [Uu]) subcp_conv_to="UTF8";;
-      [Ii]) subcp_conv_to="ISO-8859-2";;
-      [Ww]) subcp_conv_to="WINDOWS-1250";;
-    esac
-
-    if [ -n "$subcp_conv_to" ] \
-      && local encodingtype="$(file \
+  # DETEKCJA KONWERTOWANIA
+  local subcp_conv_from=""
+  local subcp_conv_to="$subcp_conv"
+  local encodingtype="$(file \
         --brief \
         --mime-encoding \
         --exclude apptype \
@@ -614,19 +585,18 @@ sub_convert_cp() {
         --exclude elf \
         --exclude soft \
         --exclude tar \
-        "${subftmp}")" \
-      && [ -n "$encodingtype" ]
-    then
-      case "${encodingtype,,}" in
-        *utf*) subcp_conv_from="UTF8";;
-        *iso*) subcp_conv_from="ISO-8859-2";;
-        *ascii*) subcp_conv_to="";;
-        *) subcp_conv_from="WINDOWS-1250";;
-      esac
-    else
-      subcp_conv_to=""
-      subcp_conv_from=""
-    fi
+        "${subftmp}")"
+
+  if [ "$?" = "0" ] && [ -n "$encodingtype" ]; then
+    case "${encodingtype,,}" in
+      *utf*) subcp_conv_from="UTF8";;
+      *iso*) subcp_conv_from="ISO-8859-2";;
+      *ascii*) subcp_conv_to="";;
+      *) subcp_conv_from="WINDOWS-1250";;
+    esac
+  else
+    subcp_conv_to=""
+    subcp_conv_from=""
   fi
 
   # PORÓWNYWANIE STRON KODOWYCH I ZAPIS
@@ -643,7 +613,7 @@ sub_convert_cp() {
   return 0
 }
 sub_convert_fmt() {
-  echo TODO: sub_convert_fmt: http://code.google.com/p/napi-bash/issues/detail?id=2
+  # TODO: sub_convert_fmt: http://code.google.com/p/napi-bash/issues/detail?id=2
   return 0
 }
 sub_install() {
@@ -681,6 +651,15 @@ sub_install() {
 #}
 
 checkbin_iconv() {
+  test -n "$subcp_conv" || return 0
+
+  case "${subcp_conv:0:1}" in
+    [Uu]) subcp_conv="UTF8";;
+    [Ii]) subcp_conv="ISO-8859-2";;
+    [Ww]) subcp_conv="WINDOWS-1250";;
+    *) subcp_conv=""; warn "Nieobsługiwana strona kodowa dla subcp_conv, pomijam..."; return 0;;
+  esac
+
   if ! BIN_iconv="$(findbin iconv)"; then
     subcp_conv=""
     warn "Aby móc korzystać z opcji subcp_conv, zainstaluj iconv"
