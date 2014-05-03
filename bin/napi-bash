@@ -1,8 +1,16 @@
 #!/bin/bash
 declare -r VERSION="0.40-next"
 declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
+declare -A subfmt_ext
 
-subext=":txt"
+subfmt_ext[fab]="txt";
+subfmt_ext[microdvd]="sub";
+subfmt_ext[mpl2]="mpl";
+subfmt_ext[subviewer]="sub";
+subfmt_ext[subrip]="srt";
+subfmt_ext[tmplayer]="txt";
+
+subext="txt"
 suboverwrite=0
 subskipifexist=0
 use_colors=1
@@ -13,6 +21,8 @@ msg_status[0]="%2%bPobrano%R dla %i%f"
 msg_status[1]="%1%bBrak napisów%R dla %i%f"
 msg_status[2]="%1Brak uprawnień do zapisu w folderze z plikiem: %f"
 msg_status[3]="%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f"
+msg_status[100]="%1Niepowiodła sie detekcja formatu napisów dla: %f"
+msg_status[101]="%1Niepowiodło się konwertowanie formatu napisów dla: %f"
 msg_status[254]="%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego.."
 msg_status[255]="%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?"
 msg_gui_disabled_array=(0 1)
@@ -171,8 +181,9 @@ get_ARGV() {
     shift
   done
 
-  test -z "$subcp_conv" || checkbin_iconv
-  checkbin_7z || exit 1
+  setup_iconv
+  setup_subotage
+  setup_7z || exit 1
 
   msg "Generowanie listy plików"
 
@@ -499,11 +510,22 @@ napi_poll() {
   fork__hash     & childPID+=($!)
   fork__download & childPID+=($!)
 
+  local _subext=""
+
   while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
 
-    __post "${childARG[@]}"
-    childARG[0]=$?
+    if [ "${childARG[0]}" = "0" ]; then
+      # Konwertowanie strony kodowej
+      subcp_convert "${childARG[@]}" || napi_msg "${childARG[1]}" "$?"
+
+      # Konwetowanie formatu napisów i/lub pobieranie rozszerzenia o ile subext ma prefix
+      _subext="$(subfmt_convert "${childARG[@]}")" || napi_msg "${childARG[1]}" "$?"
+
+      # Instalowanie napisów
+      subext="${_subext:-"txt"}" sub_install "$fid" "$md5" "$napi"
+      childARG[0]=$?
+    fi
 
     napi_msg "${childARG[1]}" "${childARG[0]}"
   done <&3
@@ -558,36 +580,54 @@ __download() {
   return 0
 }
 
-__post() {
-  test "$1" = "0" || return $1
-  local fid="$2" md5="$3" napi="$4"
-  local _subext
+subfmt_convert() {
+  local md5="$3" napi="$4"
+  local subfile="$CACHE/_${md5}_${napi}.sub"
+  local subftmp="$CACHE/_${md5}_${napi}.sub.tmp"
+  local output
 
-  # Konwertowanie strony kodowej
-  sub_convert_cp "$md5" "$napi"
+  if [ -z "$subfmt_conv" ]; then
+    if [ "${subext:0:1}" = ":" ]; then
+      output="$("$BIN_subotage" -gi "$subfile" 2>&1)"
 
-  # Konwetowanie formatu napisów i/lub pobieranie rozszerzenia o ile subext ma prefix
-  _subext="$(sub_convert_fmt "$md5" "$napi")"
-
-  subext="${subext:-":txt"}"
-
-  if [ "${subext:0:1}" != ":" ]; then
-    _subext="$subext"
-  else
-    if [ -z "$_subext" ]; then
-      _subext="${subext:1}" # ktoś może uznać że samo ":" wysztarczy, patrz niżej
+      # wystąpiło:
+      if [ "$subfmt" != "${subfmt//An error occured/}" ]; then
+        echo "${subext:1}"
+        return 100
+      else
+        echo "${subfmt_ext[${subfmt%% *}]}"
+      fi
+    else
+      echo "$subext"
     fi
+
+    return 0
   fi
 
-  # Instalowanie napisów
-  subext="${_subext:-"txt"}" sub_install "$fid" "$md5" "$napi" || return $?
+  output="$("$BIN_subotage" -i "$subfile" -o "$subftmp" -of "$subfmt_conv" 2>&1)"
+
+  # wystąpiło:
+  if [ "$output" != "${output//An error occured/}" ]; then
+    # nie wystąpiło:
+    if [ "$output" = "${output//No convertion is needed/}" ]; then
+      test "${subext:0:1}" = ":" && echo "${subext:1}" || echo "$subext"
+      return 101
+    fi
+  else
+    cat "$subftmp" > "$subfile"
+  fi
+
+  test -f "$subftmp" && unlink "$subftmp"
+  test "${subext:0:1}" = ":" \
+    && echo "${subfmt_ext[$subfmt_conv]}" \
+    || echo "$subext"
 
   return 0
 }
 
-sub_convert_cp() {
+subcp_convert() {
   test -n "$subcp_conv" || return 0
-  local md5="$1" napi="$2"
+  local md5="$3" napi="$4"
 
   # LOKALIZACJE PLIKÓW
   local subfile="$CACHE/_${md5}_${napi}.sub"
@@ -636,10 +676,7 @@ sub_convert_cp() {
 
   return 0
 }
-sub_convert_fmt() {
-  # TODO: sub_convert_fmt: http://code.google.com/p/napi-bash/issues/detail?id=2
-  return 0
-}
+
 sub_install() {
   local fid="$1" md5="$2" napi="$3"
 
@@ -674,25 +711,54 @@ sub_install() {
 #  "http://www.napiprojekt.pl/users_check.php?nick=%s&pswd=%s"
 #}
 
-checkbin_iconv() {
+setup_iconv() {
   test -n "$subcp_conv" || return 0
 
-  case "${subcp_conv:0:1}" in
-    [Uu]) subcp_conv="UTF8";;
-    [Ii]) subcp_conv="ISO-8859-2";;
-    [Ww]) subcp_conv="WINDOWS-1250";;
-    *) subcp_conv=""; warn "Nieobsługiwana strona kodowa dla subcp_conv, pomijam..."; return 0;;
+  case "${subcp_conv,,}" in
+    u*) subcp_conv="UTF8";;
+    i*) subcp_conv="ISO-8859-2";;
+    w*) subcp_conv="WINDOWS-1250";;
+    *)
+      subcp_conv=""
+      warn "Nieobsługiwana strona kodowa dla subcp_conv, pomijam..."
+      return 0
   esac
 
   if ! BIN_iconv="$(findbin iconv)"; then
     subcp_conv=""
-    warn "Aby móc korzystać z opcji subcp_conv, zainstaluj iconv"
+    warn "Aby móc korzystać z opcji subcp_conv, zainstaluj iconv..."
   fi
 }
 
-checkbin_7z() {
+setup_subotage() {
+  test -n "$subfmt_conv" || return 0
+
+  case "${subfmt_conv,,}" in
+    f*)    subfmt_conv=fab;;
+    mi*)   subfmt_conv=microdvd;;
+    mp*)   subfmt_conv=mpl2;;
+    subv*) subfmt_conv=subviewer;;
+    subr*) subfmt_conv=subrip;;
+    t*)    subfmt_conv=tmplayer;;
+    "")    true;;
+    *)
+      subfmt_conv=""
+      warn "Nieobsługiwana format napisów dla subfmt_conv, pomijam..."
+  esac
+
+  if ! BIN_subotage="$(findbin subotage.sh subotage)"; then
+    subfmt_conv=""
+    if [ "${subext:0:1}" = ":" ]; then
+      subext="${subext:1}"
+      subext="${subext:-"txt"}"
+    fi
+    warn "Aby móc korzystać z opcji subfmt_conv, zainstaluj subotage..."
+  fi
+}
+
+setup_7z() {
   if ! BIN_7z="$(findbin 7za 7z)"; then
-    error "Aby móc rozpakować archiwum z napisami zainstaluj p7zip"
+    error "Aby móc rozpakować archiwum z napisami zainstaluj p7zip..."
   fi
 }
 

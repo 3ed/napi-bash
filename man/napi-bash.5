@@ -9,14 +9,16 @@ ${XDG_CONFIG_HOME}/napi-bash/config
 .SH OPIS
 Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanymi w nim domyślne opcje i niektóre funkcje..
 .SH OPCJE KONFIGURACYJNE
-.SS subext=":txt"
-Rozszerzenie pliku napisów np. gdy opcja jest ustawiona na "txt" dla pliku /cos/film.avi napisy zostaną zapisane jako /cos/film.txt (aby włączyć auodetekcję, poprzedź dwukropkiem)
+.SS subext="txt"
+Rozszerzenie pliku napisów np. gdy opcja jest ustawiona na "txt" dla pliku /cos/film.avi napisy zostaną zapisane jako /cos/film.txt (aby aktywować autodetekcję, poprzedź dwukropkiem)
 .SS suboverwrite="1"
 Czy nadpisywać już pobrane napisy? Jeżeli 0 lub puste, doda liczbę od 0 do 99 przed rozszerzenie, w zależności od tego czy plik już istnieje (dopiero nazwa.99.txt będzie nadpisywany)
 .SS subskipifexist="0"
 Gdy plik z napisami istnije, pominie pobieranie. #0/1
 .SS subcp_conv=""
 Automatyczne konwertowanie napisów do podanej strony kodowej. Zostaw puste by wyłączyć lub użyj: "WINDOWS-1250"; "ISO-8859-2"; "UTF8".
+.SS subfmt_conv=""
+Automatyczne konwertowanie napisów do wybranego formatu. dostępne formaty to: fab, microdvd, mpl2, subviewer, subrip, tmplayer.
 .SS
 .nf
 videoext='^(3gp|avi|asf|divx|m4v|mkv|mov|mp4|mpe|mpeg|mpg|ogg|ogv|rmvb|wmv|qt)$'
@@ -28,6 +30,8 @@ Agent pobierania plików (%o wyjściowy; %u adres url)
 .SS msg_status[1]="%1%bBrak napisów%R dla %i%f"
 .SS msg_status[2]="%1Brak uprawnień do zapisu w folderze z plikiem: %f"
 .SS msg_status[3]="%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f"
+.SS msg_status[100]="%1Niepowiodła sie detekcja formatu napisów dla: %f"
+.SS msg_status[101]="%1Niepowiodło się konwertowanie formatu napisów dla: %f"
 .SS msg_status[254]="%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego.."
 .SS msg_status[255]="%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?"
 Format wyjścia dla notyfikacji "Status". Notyfikacja pojawia się za każdym razem gdy program zakończył operacje dla pojedyńczego pliku, chyba że wyłączono w `msg_{cli,gui}_disabled_array'. Zobacz też sekcje
@@ -47,6 +51,13 @@ Wyświetlaj raport końcowy (fałsz/prawda) #0/1
 Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... (fałsz/prawda) #0/1
 .SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
 .B Modyfikujesz na własną odpowiedzialność!
+.SS subfmt_ext[fab]="txt"
+.SS subfmt_ext[microdvd]="sub"
+.SS subfmt_ext[mpl2]="mpl"
+.SS subfmt_ext[subviewer]="sub"
+.SS subfmt_ext[subrip]="srt"
+.SS subfmt_ext[tmplayer]="txt"
+Domyślne rozszerzenia plików dla formatów napisów.
 .SS gui_msg_fmt="gui_xml"
 .SS cli_msg_fmt="cli_esc"
 .SS gui_raport_fmt="gui_xml"
