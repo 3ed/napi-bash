@@ -128,6 +128,14 @@ Opcje:
   -x=<str>, --subext=<str>
       Rozszerzenie pliku (ustawione: $subext)
 
+  -d=<od-do>, --depth=<od-do>
+      Głębia przeszukiwania rekursywnego (domyślnie puste).
+      Przykładowe wartości <od-do>:
+        1     ./pliki      ...   ./pliki
+        2-    ./*/pliki    ...   ./*/..../*/pliki
+        1-2   ./pliki      ...   ./*/pliki
+        -4    ./pliki      ...   ./*/*/*/pliki
+
   --debug=<plik>
       Tryb debugowy
 
@@ -164,6 +172,7 @@ get_ARGV() {
       -c=1|--colors=1|--colors)    use_colors=1;;
       -c=0|--colors=0|--no-colors) use_colors=0;;
       -x=*|--subext=*) subext="${opt#*=}" ;;
+      -d=*|--depth=*) get_ARGV__parse_depth "${opt#*=}";;
       --debug=*)
         DEBUG=1
         local debug_log="${opt#*=}"
@@ -204,6 +213,18 @@ get_ARGV() {
  fi
 }
 
+get_ARGV__parse_depth() {
+  test -z "${1//[0-9-]/}" || return 0
+
+  local left="${1%%-*}"
+  local right="${1##*-}"
+
+  test -n "$left" && left="-mindepth $left"
+  test -n "$right" && right="-maxdepth $right"
+
+  DEPTH="$left $right"
+}
+
 get_ARGV__bad_arg() {
   error "Brakujący lub niepoprawny argument dla '$1'"
   exit 1
@@ -214,7 +235,7 @@ get_ARGV__get_filelist_from_dir_recursively() {
 
   while IFS= read -r -u4 -d $'\0' i; do
     get_ARGV__add_video_to_filelist "$i"
-  done 4< <(find "$1" -type f -print0)
+  done 4< <(find "$1" $DEPTH -type f -print0)
 }
 
 get_ARGV__add_video_to_filelist() {

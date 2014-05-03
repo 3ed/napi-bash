@@ -17,6 +17,16 @@ Pomijaj pobrane gdy plik z napisami już istnieje: 0=nie; 1=tak (domyślnie: 0)
 Używaj kolorów: 0=nie; 1=tak (domyślnie: 1)
 .SS -x=<tekst>, --subext=<tekst>
 Rozszerzenie pliku (domyślnie: txt)
+.SS -d=<od-do>, --depth=<od-do>
+Głębia przeszukiwania rekursywnego (domyślnie puste). Przykładowe wartości <od-do>:
+.br
+1     ./pliki      ...   ./pliki
+.br
+2-    ./*/pliki    ...   ./*/..../*/pliki
+.br
+1-2   ./pliki      ...   ./*/pliki
+.br
+-4    ./pliki      ...   ./*/*/*/pliki
 .SS debug=<plik>
 Tryb debugowy
 .SS -h, --help, --usage
