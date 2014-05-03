@@ -523,7 +523,7 @@ napi_poll() {
       _subext="$(subfmt_convert "${childARG[@]}")" || napi_msg "${childARG[1]}" "$?"
 
       # Instalowanie napisów
-      subext="${_subext:-"txt"}" sub_install "$fid" "$md5" "$napi"
+      subext="${_subext:-"txt"}" sub_install "${childARG[@]}"
       childARG[0]=$?
     fi
 
@@ -678,7 +678,7 @@ subcp_convert() {
 }
 
 sub_install() {
-  local fid="$1" md5="$2" napi="$3"
+  local fid="$2" md5="$3" napi="$4"
 
   local subfile="$CACHE/_${md5}_${napi}.sub"
   local npath="${files[$fid]%.*}"
