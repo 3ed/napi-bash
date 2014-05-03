@@ -9,8 +9,8 @@ ${XDG_CONFIG_HOME}/napi-bash/config
 .SH OPIS
 Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanymi w nim domyślne opcje i niektóre funkcje..
 .SH OPCJE KONFIGURACYJNE
-.SS subext="txt"
-Rozszerzenie pliku napisów np. gdy opcja jest ustawiona na "txt" dla pliku /cos/film.avi napisy zostaną zapisane jako /cos/film.txt
+.SS subext=":txt"
+Rozszerzenie pliku napisów np. gdy opcja jest ustawiona na "txt" dla pliku /cos/film.avi napisy zostaną zapisane jako /cos/film.txt (aby włączyć auodetekcję, poprzedź dwukropkiem)
 .SS suboverwrite="1"
 Czy nadpisywać już pobrane napisy? Jeżeli 0 lub puste, doda liczbę od 0 do 99 przed rozszerzenie, w zależności od tego czy plik już istnieje (dopiero nazwa.99.txt będzie nadpisywany)
 .SS subskipifexist="0"

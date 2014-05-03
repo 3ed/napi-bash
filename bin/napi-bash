@@ -2,7 +2,7 @@
 declare -r VERSION="0.40-next"
 declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
 
-subext="txt"
+subext=":txt"
 suboverwrite=0
 subskipifexist=0
 use_colors=1
@@ -64,12 +64,12 @@ info() {
   return 1
 }
 warn() {
-  __print "0;33;1" "Uwaga:" "0" "$1" >&2
+  __print "0;33;1" "Uwaga:" "0" "$1" | to_stderr
   test -n "$DISPLAY" && enabled "$gui_int_warn" && gui_msg "warn" "$1" &> /dev/null &
   return 1
 }
 error() {
-  __print "0;31;1" "Błąd:" "0" "$1" >&2
+  __print "0;31;1" "Błąd:" "0" "$1" | to_stderr
   test -n "$DISPLAY" && gui_msg "error" "$1" &> /dev/null &
   return 1
 }
@@ -86,6 +86,14 @@ enabled() {
     return 1
   else
     return 0
+  fi
+}
+
+to_stderr() {
+  if enabled "$DEBUG"; then
+    cat
+  else
+    cat >&2
   fi
 }
 
@@ -147,6 +155,7 @@ get_ARGV() {
       -c=0|--colors=0|--no-colors) use_colors=0;;
       -x=*|--subext=*) subext="${opt#*=}" ;;
       --debug=*)
+        DEBUG=1
         local debug_log="${opt#*=}"
         exec 2>&-;
         exec 2<>"${debug_log:-"napi-bash.debug.log"}";
@@ -385,7 +394,7 @@ napi_msg_cli() {
   if [ "$3" = "0" ]; then
     fill_fields "msg" "$cli_msg_fmt" "$@"
   else
-    fill_fields "msg" "$cli_msg_fmt" "$@" >&2
+    fill_fields "msg" "$cli_msg_fmt" "$@" | to_stderr
   fi
 }
 napi_raport() {
@@ -552,11 +561,26 @@ __download() {
 __post() {
   test "$1" = "0" || return $1
   local fid="$2" md5="$3" napi="$4"
+  local _subext
 
+  # Konwertowanie strony kodowej
   sub_convert_cp "$md5" "$napi"
-  sub_convert_fmt "$md5" "$napi"
 
-  sub_install "$fid" "$md5" "$napi" || return $?
+  # Konwetowanie formatu napisów i/lub pobieranie rozszerzenia o ile subext ma prefix
+  _subext="$(sub_convert_fmt "$md5" "$napi")"
+
+  subext="${subext:-":txt"}"
+
+  if [ "${subext:0:1}" != ":" ]; then
+    _subext="$subext"
+  else
+    if [ -z "$_subext" ]; then
+      _subext="${subext:1}" # ktoś może uznać że samo ":" wysztarczy, patrz niżej
+    fi
+  fi
+
+  # Instalowanie napisów
+  subext="${_subext:-"txt"}" sub_install "$fid" "$md5" "$napi" || return $?
 
   return 0
 }
