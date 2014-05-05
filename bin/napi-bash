@@ -1,16 +1,14 @@
 #!/bin/bash
 declare -r VERSION="0.40-next"
 declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
-declare -A subfmt_ext
 
-subfmt_ext[fab]="txt";
-subfmt_ext[microdvd]="sub";
-subfmt_ext[mpl2]="mpl";
-subfmt_ext[subviewer]="sub";
-subfmt_ext[subrip]="srt";
-subfmt_ext[tmplayer]="txt";
+subfmt_supported=("fab=txt" "microdvd=sub" "mpl2=mpl" "subviewer=sub" "subrip=srt" "tmplayer=txt")
+
+subcp_conv=""
+subfmt_conv=""
 
 subext="txt"
+subext_autodetect=0
 suboverwrite=0
 subskipifexist=0
 use_colors=1
@@ -126,7 +124,17 @@ Opcje:
       Używaj kolorów: 0=nie; 1=tak (ustawione: $use_colors)
 
   -x=<str>, --subext=<str>
-      Rozszerzenie pliku (ustawione: $subext)
+      Rozszerzenie pliku (ustawione: "$subext").
+
+  -X=<0/1>, --subext-autodetect=<0/1>, --(no-)subext-autodetect
+      Przeprowadzić autodetekcji: 0=nie; 1=tak (ustawione: $subext_autodetect).
+
+  -f=<str>, --subfmt-conv=<str>
+      Format napisów. Puste by wyłączyć. (ustawione: "$subfmt_conv")
+
+  -C=<str>, --subcp-conv=<str>
+      Konwerowanie strony kodowej napisów. Puste by wyłączyć.
+      (ustawione: "$subfmt_conv")
 
   -d=<od-do>, --depth=<od-do>
       Głębia przeszukiwania rekursywnego (domyślnie puste).
@@ -154,6 +162,20 @@ EOF
 	exit 1
 }
 
+conf__get_opt() {
+  local opt="$1"; shift
+  local i
+
+  for i in "${@}"; do
+    if [ "${i%%=*}" = "$opt" ]; then
+      echo "${i#*=}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 #-------------------------------------------------------------------------------
 #  Pobieranie argumentów, wyszkiwanie i badanie plików..
 #-------------------------------------------------------------------------------
@@ -171,6 +193,10 @@ get_ARGV() {
       -s=0|--skipifexist=0|--no-skipifexist) subskipifexist=0 ;;
       -c=1|--colors=1|--colors)    use_colors=1;;
       -c=0|--colors=0|--no-colors) use_colors=0;;
+      -X=1|--subext-autodetect=1|--subext-autodetect)    subext_autodetect="1" ;;
+      -X=0|--subext-autodetect=0|--no-subext-autodetect) subext_autodetect="0" ;;
+      -f=*|--subfmt-conv=*) subfmt_conv="${opt#*=}" ;;
+      -C=*|--subcp-conv=*) subcp_conv="${opt#*=}" ;;
       -x=*|--subext=*) subext="${opt#*=}" ;;
       -d=*|--depth=*) get_ARGV__parse_depth "${opt#*=}";;
       --debug=*)
@@ -246,11 +272,17 @@ get_ARGV__add_video_to_filelist() {
     && test "$size" -ge "10485760" \
     || return 1
 
-  enabled "$subskipifexist" \
-    && [ -f "${1%.*}.$subext" ] \
-    && return 0
+  if enabled "$subskipifexist"; then
+    if enabled "$subext_autodetect"; then
+      # TODO "ułądnić"; Pomjać z opcją overwrite?
+      for i in "${subfmt_supported[@]}"; do
+        test -f "${1%.*}.${i#*=}" && return 0
+      done
+    fi
+    test -f "${1%.*}.$subext" && return 0
+  fi
 
-    files+=("$1")
+  files+=("$1")
 }
 
 
@@ -414,7 +446,11 @@ napi_msg() {
   napi_msg_cli "$msg" "$@"
   napi_msg_gui "$msg" "$@"
 
-  test "$2" -lt "200" || exit 1
+  if [ "$2" -ge "100" ]; then
+    test "$2" -ge "200" && exit 1
+    files_warn[$1]+="${files_warn[$1]:+","}$2"
+  fi
+
   return $2
 }
 napi_msg_gui() {
@@ -605,33 +641,27 @@ subfmt_convert() {
   local md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
   local subftmp="$CACHE/_${md5}_${napi}.sub.tmp"
-  local output
+  local output i
 
   if [ -z "$subfmt_conv" ]; then
-    if [ "${subext:0:1}" = ":" ]; then
+    if enabled "$subext_autodetect"; then
       output="$("$BIN_subotage" -gi "$subfile" 2>&1)"
 
-      # wystąpiło:
-      if [ "$subfmt" != "${subfmt//An error occured/}" ]; then
-        echo "${subext:1}"
-        return 100
-      else
-        echo "${subfmt_ext[${subfmt%% *}]}"
-      fi
-    else
+      conf__get_opt "${output%% *}" "${subfmt_supported[@]}" && return 0
+
       echo "$subext"
+      return 100
     fi
 
+    echo "$subext"
     return 0
   fi
 
   output="$("$BIN_subotage" -i "$subfile" -o "$subftmp" -of "$subfmt_conv" 2>&1)"
 
-  # wystąpiło:
-  if [ "$output" != "${output//An error occured/}" ]; then
-    # nie wystąpiło:
-    if [ "$output" = "${output//No convertion is needed/}" ]; then
-      test "${subext:0:1}" = ":" && echo "${subext:1}" || echo "$subext"
+  if [[ "$output" =~ "An error occured" ]]; then
+    if ! [[ "$output" =~ "No convertion is needed" ]]; then
+      echo "$subext"
       return 101
     fi
   else
@@ -639,8 +669,9 @@ subfmt_convert() {
   fi
 
   test -f "$subftmp" && unlink "$subftmp"
-  test "${subext:0:1}" = ":" \
-    && echo "${subfmt_ext[$subfmt_conv]}" \
+
+  enabled "$subext_autodetect" \
+    && conf__get_opt "$subfmt_conv" "${subfmt_supported[@]}" \
     || echo "$subext"
 
   return 0
@@ -761,7 +792,7 @@ setup_subotage() {
     subv*) subfmt_conv=subviewer;;
     subr*) subfmt_conv=subrip;;
     t*)    subfmt_conv=tmplayer;;
-    "")    true;;
+    "")    enabled "$subext_autodetect" || return 0;;
     *)
       subfmt_conv=""
       warn "Nieobsługiwana format napisów dla subfmt_conv, pomijam..."
@@ -769,10 +800,7 @@ setup_subotage() {
 
   if ! BIN_subotage="$(findbin subotage.sh subotage)"; then
     subfmt_conv=""
-    if [ "${subext:0:1}" = ":" ]; then
-      subext="${subext:1}"
-      subext="${subext:-"txt"}"
-    fi
+    subext_autodetect=0
     warn "Aby móc korzystać z opcji subfmt_conv, zainstaluj subotage..."
   fi
 }

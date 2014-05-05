@@ -10,11 +10,15 @@ ${XDG_CONFIG_HOME}/napi-bash/config
 Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanymi w nim domyślne opcje i niektóre funkcje..
 .SH OPCJE KONFIGURACYJNE
 .SS subext="txt"
-Rozszerzenie pliku napisów np. gdy opcja jest ustawiona na "txt" dla pliku /cos/film.avi napisy zostaną zapisane jako /cos/film.txt (aby aktywować autodetekcję, poprzedź dwukropkiem)
+Rozszerzenie pliku napisów np. gdy opcja jest ustawiona na "txt" dla pliku /cos/film.avi napisy zostaną zapisane jako /cos/film.txt.
+.Ss subext_autodetect=""
+Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. Ta funkcja może spowolnić proces pobierania napisów. W razie niepowodzenia, użyta zostanie wartość opcji subext.
 .SS suboverwrite="1"
 Czy nadpisywać już pobrane napisy? Jeżeli 0 lub puste, doda liczbę od 0 do 99 przed rozszerzenie, w zależności od tego czy plik już istnieje (dopiero nazwa.99.txt będzie nadpisywany)
 .SS subskipifexist="0"
 Gdy plik z napisami istnije, pominie pobieranie. #0/1
+.br
+Uwaga: Przy autodetekcji rozszerzenia, będą pomijane rozszerzenia wszystkch obsługiwanych formatów i wartość opcji subext.
 .SS subcp_conv=""
 Automatyczne konwertowanie napisów do podanej strony kodowej. Zostaw puste by wyłączyć lub użyj: "WINDOWS-1250"; "ISO-8859-2"; "UTF8".
 .SS subfmt_conv=""

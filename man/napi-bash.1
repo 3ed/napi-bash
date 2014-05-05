@@ -11,14 +11,28 @@ napi-bash to program do pobierania polskich napisów z serwerów napi-projectu.
 .SH OPCJE
 .SS -o=<0/1>, --suboverwrite=<0/1>, --(no-)suboverwrite
 Nadpisuj pliki: 0=nie; 1=tak (domyślnie: 0)
+.br
+- Gdy wartość jest twierdząca, program nadpisze plik.
+.br
+- Gdy wartość jest przecząca, program sprawdzi czy nazwa.roz istnieje i jeśli tak: dokona sprawdzania plików od nazwa.0.roz do nazwa.99.roz aż napotka na nieistniejący (albo nadpisze nazwa.99.roz).
 .SS -s=<0/1>, --skipifexist=<0/1>, --(no-)skipifexist
 Pomijaj pobrane gdy plik z napisami już istnieje: 0=nie; 1=tak (domyślnie: 0)
+.br
+Uwaga: Przy autodetekcji rozszerzenia, będą pomijane rozszerzenia wszystkch obsługiwanych formatów i wartość opcji subext.
 .SS -c=<0/1>|--colors=<0/1>|--(no-)colors
 Używaj kolorów: 0=nie; 1=tak (domyślnie: 1)
 .SS -x=<tekst>, --subext=<tekst>
-Rozszerzenie pliku (domyślnie: txt)
+Rozszerzenie pliku napisów (domyślnie: txt)
+.SS -X=<0/1>, --subext-autodetect=<0/1>, --(no-)subext-autodetect
+Dokonuj autodetekcji: 0=nie; 1=tak. (domyślnie: 0)
+.br
+Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. Ta funkcja może spowolnić proces pobierania napisów. W razie niepowodzenia, użyta zostanie wartość opcji subext.
+.SS -f=<str>, --subfmt-conv=<str>
+Format napisów. Puste by wyłączyć. (domyślnie: "")
+.br
+Obsługiwane są następujące formaty: fab, microdvd, mpl2, subviewer, subrip, tmplayer.
 .SS -d=<od-do>, --depth=<od-do>
-Głębia przeszukiwania rekursywnego (domyślnie puste). Przykładowe wartości <od-do>:
+Głębia przeszukiwania rekursywnego (domyślnie: ""). Przykładowe wartości <od-do>:
 .br
 1     ./pliki      ...   ./pliki
 .br
