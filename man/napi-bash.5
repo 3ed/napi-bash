@@ -1,5 +1,5 @@
 .\" Manpage for napi-bash.conf.
-.TH NAPI-BASH 5 "2013-06-13" "0.31" "Konfiguracja napi-bash"
+.TH NAPI-BASH 5 "2014-05-08" "0.40" "Konfiguracja napi-bash"
 .SH NAZWA
 Konfiguracja programu napi-bash..
 .SH LOKALIZACJA
@@ -9,20 +9,33 @@ ${XDG_CONFIG_HOME}/napi-bash/config
 .SH OPIS
 Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanymi w nim domyślne opcje i niektóre funkcje..
 .SH OPCJE KONFIGURACYJNE
-.SS subext="txt"
-Rozszerzenie pliku napisów np. gdy opcja jest ustawiona na "txt" dla pliku /cos/film.avi napisy zostaną zapisane jako /cos/film.txt.
-.Ss subext_autodetect=""
-Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. Ta funkcja może spowolnić proces pobierania napisów. W razie niepowodzenia, użyta zostanie wartość opcji subext.
-.SS suboverwrite="1"
-Czy nadpisywać już pobrane napisy? Jeżeli 0 lub puste, doda liczbę od 0 do 99 przed rozszerzenie, w zależności od tego czy plik już istnieje (dopiero nazwa.99.txt będzie nadpisywany)
-.SS subskipifexist="0"
-Gdy plik z napisami istnije, pominie pobieranie. #0/1
-.br
-Uwaga: Przy autodetekcji rozszerzenia, będą pomijane rozszerzenia wszystkch obsługiwanych formatów i wartość opcji subext.
-.SS subcp_conv=""
-Automatyczne konwertowanie napisów do podanej strony kodowej. Zostaw puste by wyłączyć lub użyj: "WINDOWS-1250"; "ISO-8859-2"; "UTF8".
-.SS subfmt_conv=""
-Automatyczne konwertowanie napisów do wybranego formatu. dostępne formaty to: fab, microdvd, mpl2, subviewer, subrip, tmplayer.
+.SS
+.nf
+suboverwrite, skipifexist, colors, subext, subext_autodetect, subfmt_conv, subcp_conv
+.fi
+.TS
+tab(#);
+|l|l|.
+_
+Opcja konfiguracji#Argument polecenia
+_
+suboverwrite=*#-o=xyz, --suboverwrite=*
+_
+skipifexist=*#-s=*, --skipifexist=*
+_
+colors=*#-c=*|--colors=*
+_
+subext=*#-x=*, --subext=*
+_
+subext_autodetect=*#-X=*, --subext-autodetect=*
+_
+subfmt_conv=*#-f=*, --subfmt-conv=*
+_
+subcp_conv=*#-C=*, --subcp-conv=*
+_
+.TE
+Patrz:
+.BR napi-bash (1)
 .SS
 .nf
 videoext='^(3gp|avi|asf|divx|m4v|mkv|mov|mp4|mpe|mpeg|mpg|ogg|ogv|rmvb|wmv|qt)$'
@@ -55,13 +68,8 @@ Wyświetlaj raport końcowy (fałsz/prawda) #0/1
 Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... (fałsz/prawda) #0/1
 .SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
 .B Modyfikujesz na własną odpowiedzialność!
-.SS subfmt_ext[fab]="txt"
-.SS subfmt_ext[microdvd]="sub"
-.SS subfmt_ext[mpl2]="mpl"
-.SS subfmt_ext[subviewer]="sub"
-.SS subfmt_ext[subrip]="srt"
-.SS subfmt_ext[tmplayer]="txt"
-Domyślne rozszerzenia plików dla formatów napisów.
+\".SS subfmt_supported=("format=rozszerzenie" ....) (może ulec zmianie)
+\"#Obsługiwane formaty napisów i ich domyślne rozszerzenia.
 .SS gui_msg_fmt="gui_xml"
 .SS cli_msg_fmt="cli_esc"
 .SS gui_raport_fmt="gui_xml"
@@ -117,7 +125,7 @@ Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projekt
 .SH AUTORZY
 Krzysztof (3ED) AS  -- krzysztof1987  [na]  gmail  [kropka]  com
 .PP
-Strona projektu: http://code.google.com/p/napi-bash/
+Strona projektu: https://3ed.github.io/napi-bash
 .PP
 .B Program został wykonany przy użyciu tych narzędzi:
     bash      - 99.(9)% całego kodu

@@ -1,5 +1,5 @@
 .\" Manpage for napi-bash.
-.TH NAPI-BASH 1 "2013-06-13" "0.31" "napi-bash"
+.TH NAPI-BASH 1 "2014-05-08" "0.40" "napi-bash"
 .SH NAZWA
 napi-bash - pobieranie polskich napisów do filmów..
 .SH SKŁADNIA
@@ -9,25 +9,25 @@ napi-bash <-h|--help>
 .SH OPIS
 napi-bash to program do pobierania polskich napisów z serwerów napi-projectu.
 .SH OPCJE
-.SS -o=<0/1>, --suboverwrite=<0/1>, --(no-)suboverwrite
-Nadpisuj pliki: 0=nie; 1=tak (domyślnie: 0)
+.SS -o=<bool>, --suboverwrite=<bool>, --(no-)suboverwrite
+Nadpisuj pliki (domyślnie: nie)
 .br
 - Gdy wartość jest twierdząca, program nadpisze plik.
 .br
 - Gdy wartość jest przecząca, program sprawdzi czy nazwa.roz istnieje i jeśli tak: dokona sprawdzania plików od nazwa.0.roz do nazwa.99.roz aż napotka na nieistniejący (albo nadpisze nazwa.99.roz).
-.SS -s=<0/1>, --skipifexist=<0/1>, --(no-)skipifexist
-Pomijaj pobrane gdy plik z napisami już istnieje: 0=nie; 1=tak (domyślnie: 0)
+.SS -s=<bool>, --skipifexist=<bool>, --(no-)skipifexist
+Pomijaj pobrane gdy plik z napisami już istnieje (domyślnie: nie)
 .br
 Uwaga: Przy autodetekcji rozszerzenia, będą pomijane rozszerzenia wszystkch obsługiwanych formatów i wartość opcji subext.
-.SS -c=<0/1>|--colors=<0/1>|--(no-)colors
-Używaj kolorów: 0=nie; 1=tak (domyślnie: 1)
+.SS -c=<bool>|--colors=<bool>|--(no-)colors
+Używaj kolorów (domyślnie: tak)
 .SS -x=<tekst>, --subext=<tekst>
 Rozszerzenie pliku napisów (domyślnie: txt)
-.SS -X=<0/1>, --subext-autodetect=<0/1>, --(no-)subext-autodetect
-Dokonuj autodetekcji: 0=nie; 1=tak. (domyślnie: 0)
+.SS -X=<bool>, --subext-autodetect=<bool>, --(no-)subext-autodetect
+Dokonuj autodetekcji (domyślnie: nie)
 .br
 Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. Ta funkcja może spowolnić proces pobierania napisów. W razie niepowodzenia, użyta zostanie wartość opcji subext.
-.SS -f=<str>, --subfmt-conv=<str>
+.SS -f=<tekst>, --subfmt-conv=<tekst>
 Format napisów. Puste by wyłączyć. (domyślnie: "")
 .br
 Obsługiwane są następujące formaty: fab, microdvd, mpl2, subviewer, subrip, tmplayer.
@@ -45,6 +45,13 @@ Głębia przeszukiwania rekursywnego (domyślnie: ""). Przykładowe wartości <o
 Tryb debugowy
 .SS -h, --help, --usage
 Wyświetl pomoc
+.SH TYPY ARGUMENTÓW
+.SS bool (lub boolean)
+Argument logiczny typu prawda lub fałsz. Jako fałsz przymowane są następujące argumenty: „0”, „-”, „nie”, „off”, „fałsz”, „false”, „wyłącz” lub „”.
+.SS tekst
+Dowolny tekst.
+.SS od-do
+Zakres od-do: „1-3” oznacza „od 1 do 3”; „-3” odznacza „do 3”; „2-” oznacza „od 2”; „1” oznacza „od 1 do 1” lub „1”.
 .SH BŁĘDY
 Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projektu.
 .SH ZOBACZ TEŻ
@@ -52,7 +59,7 @@ Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projekt
 .SH AUTORZY
 Krzysztof (3ED) AS  -- krzysztof1987  [na]  gmail  [kropka]  com
 .PP
-Strona projektu: http://code.google.com/p/napi-bash/
+Strona projektu: https://3ed.github.io/napi-bash
 .PP
 .B Program został wykonany przy użyciu tych narzędzi:
     bash      - 99.(9)% całego kodu
