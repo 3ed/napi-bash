@@ -633,6 +633,36 @@ __download() {
 		return 255
 	fi
 
+  # SPRAWDZANIE ZAWARTOŚCI POBRANEGO PLIKU
+  ### czasami jest tam tekst typu "Przerwa techniczna"
+  local dlfile_size="$(stat -c "%s" "$dlfile")"
+
+  if [ "$dlfile_size" -le "1000" ]; then
+    local dlfile_mime="$(file \
+      --brief \
+      --exclude apptype \
+      --exclude encoding \
+      --exclude tokens \
+      --exclude cdf \
+      --exclude compress \
+      --exclude elf \
+      --exclude tar \
+      --exclude soft \
+      --mime-type \
+      "$dlfile")"
+
+    if [ "$dlfile_mime" = "text/plain" ]; then
+      if [ "$dlfile_size" -le "200" ]; then
+        error "Wewnętrzny błąd serwera: $(cat "$dlfile")"
+        exit 1
+      else
+        error "Wewnętrzny błąd serwera..."
+        exit 1
+      fi
+    fi
+  fi
+
+
   # ROZPAKOWYWANIE NAPISÓW
   "$BIN_7z" x -y -so -piBlm8NTigvru0Jr0 "$dlfile" > "$subfile" 2>/dev/null
   test -f "$dlfile" && unlink "$dlfile"
