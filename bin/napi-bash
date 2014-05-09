@@ -21,6 +21,7 @@ msg_status[2]="%1Brak uprawnień do zapisu w folderze z plikiem: %f"
 msg_status[3]="%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f"
 msg_status[100]="%1Niepowiodła sie detekcja formatu napisów dla: %f"
 msg_status[101]="%1Niepowiodło się konwertowanie formatu napisów dla: %f"
+msg_status[200]="%1Zdalny serwer zwrócił: Przerwa techniczna..."
 msg_status[254]="%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego.."
 msg_status[255]="%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?"
 msg_gui_disabled_array=(0 1)
@@ -637,7 +638,7 @@ __download() {
   ### czasami jest tam tekst typu "Przerwa techniczna"
   local dlfile_size="$(stat -c "%s" "$dlfile")"
 
-  if [ "$dlfile_size" -le "1000" ]; then
+  if [ "$dlfile_size" -le "200" ]; then
     local dlfile_mime="$(file \
       --brief \
       --exclude apptype \
@@ -652,13 +653,11 @@ __download() {
       "$dlfile")"
 
     if [ "$dlfile_mime" = "text/plain" ]; then
-      if [ "$dlfile_size" -le "200" ]; then
-        error "Wewnętrzny błąd serwera: $(cat "$dlfile")"
-        exit 1
-      else
-        error "Wewnętrzny błąd serwera..."
-        exit 1
-      fi
+      local dlfile_source="$(cat "$dlfile")"
+      case "${dlfile_source,,}" in
+        *"przerwa techniczna"*) return 200;;
+        *) return 201;;
+      esac
     fi
   fi
 
