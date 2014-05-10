@@ -654,8 +654,10 @@ __download() {
 
     if [ "$dlfile_mime" = "text/plain" ]; then
       local dlfile_source="$(cat "$dlfile")"
+      unlink "$dlfile"
       case "${dlfile_source,,}" in
         *"przerwa techniczna"*) return 200;;
+        npc0) return 1;;
         *) return 201;;
       esac
     fi
