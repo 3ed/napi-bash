@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r VERSION="0.40-next"
+declare -r VERSION="0.40"
 declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
 
 subfmt_supported=("fab=txt" "microdvd=sub" "mpl2=mpl" "subviewer=sub" "subrip=srt" "tmplayer=txt")
@@ -823,7 +823,7 @@ setup_iconv() {
 }
 
 setup_subotage() {
-  test -n "$subfmt_conv" || return 0
+  test -n "$subfmt_conv" || enabled "$subext_autodetect" || return 0
 
   case "${subfmt_conv,,}" in
     f*)    subfmt_conv=fab;;
@@ -832,7 +832,7 @@ setup_subotage() {
     subv*) subfmt_conv=subviewer;;
     subr*) subfmt_conv=subrip;;
     t*)    subfmt_conv=tmplayer;;
-    "")    enabled "$subext_autodetect" || return 0;;
+    "")    subfmt_conv="";;
     *)
       subfmt_conv=""
       warn "Nieobsługiwana format napisów dla subfmt_conv, pomijam..."
