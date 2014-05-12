@@ -28,9 +28,13 @@ Dokonuj autodetekcji (domyślnie: nie)
 .br
 Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. Ta funkcja może spowolnić proces pobierania napisów. W razie niepowodzenia, użyta zostanie wartość opcji subext.
 .SS -f=<tekst>, --subfmt-conv=<tekst>
-Format napisów. Puste by wyłączyć. (domyślnie: "")
+Konwertowanie formatu napisów. Puste by wyłączyć. (domyślnie: "")
 .br
-Obsługiwane są następujące formaty: fab, microdvd, mpl2, subviewer, subrip, tmplayer.
+Obsługiwane są następujące formaty: „fab”, „microdvd”, „mpl2”, „subviewer”, „subrip”, „tmplayer”.
+.SS -C=<tekst>, --subcp-conv=<tekst>
+Konwertowanie kodowania znaków. Puste by wyłączyć. (domyślnie: "")
+.br
+Obsługiwane kodowania to: „UTF-8”, „ISO-8859-2”, „WINDOWS-1252”
 .SS -d=<od-do>, --depth=<od-do>
 Głębia przeszukiwania rekursywnego (domyślnie: ""). Przykładowe wartości <od-do>:
 .br
@@ -47,7 +51,7 @@ Tryb debugowy
 Wyświetl pomoc
 .SH TYPY ARGUMENTÓW
 .SS bool (lub boolean)
-Argument logiczny typu prawda lub fałsz. Jako fałsz przymowane są następujące argumenty: „0”, „-”, „nie”, „off”, „fałsz”, „false”, „wyłącz” lub „”.
+Argument logiczny typu prawda lub fałsz. Jako fałsz przyjmowane są następujące argumenty: „0”, „-”, „nie”, „off”, „fałsz”, „false”, „wyłącz” lub „”.
 .SS tekst
 Dowolny tekst.
 .SS od-do
@@ -60,11 +64,17 @@ Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projekt
 Krzysztof (3ED) AS  -- krzysztof1987  [na]  gmail  [kropka]  com
 .PP
 Strona projektu: https://3ed.github.io/napi-bash
+.fi
 .PP
 .B Program został wykonany przy użyciu tych narzędzi:
     bash      - 99.(9)% całego kodu
     curl      - domyślny agent pobierania
     dd        - wczytywanie określonej ilości bajtów pliku
-    libnotify - wyświetlanie komunikatów na pulpicie
     md5sum    - sumy kontrolne md5
+.fi
+.PP
+.B Narzędzia opcjonalne:
+    iconv     - zmiana kodowania czcionek
+    subotage  - konwertowanie formatu napisów
+    libnotify - wyświetlanie komunikatów na pulpicie
 .fi
