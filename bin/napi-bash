@@ -133,7 +133,7 @@ Opcje:
 
   -C=<tekst>, --subcp-conv=<tekst>
       Konwerowanie strony kodowej napisów. Puste by wyłączyć.
-      (ustawione: "$subfmt_conv")
+      (ustawione: "$subcp_conv")
 
   -d=<od-do>, --depth=<od-do>
       Głębia przeszukiwania rekursywnego..
