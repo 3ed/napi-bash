@@ -677,6 +677,21 @@ __download() {
   return 0
 }
 
+subfmt_convert__subext_autodetect() {
+  local subfile="$1" output
+
+  if enabled "$subext_autodetect"; then
+    output="$("$BIN_subotage" -gi "$subfile" 2>&1)"
+
+    array__get_opt "${output%% *}" "${subfmt_supported[@]}" && return 0
+
+    echo "$subext"
+    return 100
+  fi
+
+  echo "$subext"
+}
+
 subfmt_convert() {
   local md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
@@ -684,24 +699,15 @@ subfmt_convert() {
   local output i
 
   if [ -z "$subfmt_conv" ]; then
-    if enabled "$subext_autodetect"; then
-      output="$("$BIN_subotage" -gi "$subfile" 2>&1)"
-
-      array__get_opt "${output%% *}" "${subfmt_supported[@]}" && return 0
-
-      echo "$subext"
-      return 100
-    fi
-
-    echo "$subext"
-    return 0
+    subfmt_convert__subext_autodetect "$subfile"
+    return $?
   fi
 
   output="$("$BIN_subotage" -i "$subfile" -o "$subftmp" -of "$subfmt_conv" 2>&1)"
 
   if [[ "$output" =~ "An error occured" ]]; then
     if ! [[ "$output" =~ "No convertion is needed" ]]; then
-      echo "$subext"
+      subfmt_convert__subext_autodetect "$subfile"
       return 101
     fi
   else
