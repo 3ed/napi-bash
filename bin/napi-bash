@@ -893,6 +893,7 @@ findbin() {
 #  Główny kod / main()
 #-------------------------------------------------------------------------------
 # main() {
+test -t 1 || colors=0
 
 CACHE="$(mktemp -u -d -p "${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/" $$.XXXX)"
 mkdir -p "$CACHE"
