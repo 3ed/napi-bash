@@ -6,6 +6,7 @@ subfmt_supported=("fab=txt" "microdvd=sub" "mpl2=mpl" "subviewer=sub" "subrip=sr
 
 subcp_conv=""
 subfmt_conv=""
+subeol_conv=""
 
 subext="txt"
 subext_autodetect=nie
@@ -128,12 +129,16 @@ Opcje:
   -X=<bool>, --subext-autodetect=<bool>, --(no-)subext-autodetect
       Przeprowadzić autodetekcji (ustawione: $subext_autodetect).
 
-  -f=<tekst>, --subfmt-conv=<tekst>
+  -F=<tekst>, --subfmt-conv=<tekst>
       Format napisów. Puste by wyłączyć. (ustawione: "$subfmt_conv")
 
   -C=<tekst>, --subcp-conv=<tekst>
       Konwerowanie strony kodowej napisów. Puste by wyłączyć.
       (ustawione: "$subcp_conv")
+
+  -E=<tekst>, --subeol-conv=<tekst>
+      Konwertowanie typu oznaczenia końca linii. Puste by
+      wyłączyć. (ustawione: "$subeol_conv")
 
   -d=<od-do>, --depth=<od-do>
       Głębia przeszukiwania rekursywnego..
@@ -195,7 +200,8 @@ get_ARGV() {
         colors="$(get_ARGV__bool "$opt")";;
       -X=*|--subext-autodetect=*|--subext-autodetect|--no-subext-autodetect)
         subext_autodetect="$(get_ARGV__bool "$opt")";;
-      -f=*|--subfmt-conv=*) subfmt_conv="${opt#*=}" ;;
+      -F=*|--subfmt-conv=*) subfmt_conv="${opt#*=}" ;;
+      -E=*|--subeol-conv=*) subeol_conv="${opt#*=}";;
       -C=*|--subcp-conv=*) subcp_conv="${opt#*=}" ;;
       -x=*|--subext=*) subext="${opt#*=}" ;;
       -d=*|--depth=*) get_ARGV__parse_depth "${opt#*=}";;
@@ -586,6 +592,8 @@ napi_poll() {
       # Konwertowanie strony kodowej
       subcp_convert "${childARG[@]}" || napi_msg "${childARG[1]}" "$?"
 
+      subeol_convert "${childARG[@]}"
+
       # Konwetowanie formatu napisów i/lub pobieranie rozszerzenia o ile subext ma prefix
       _subext="$(subfmt_convert "${childARG[@]}")" || napi_msg "${childARG[1]}" "$?"
 
@@ -773,6 +781,16 @@ subcp_convert() {
   unlink "$subftmp"
 
   return 0
+}
+
+subeol_convert() {
+  local md5="$3" napi="$4"
+  local subfile="$CACHE/_${md5}_${napi}.sub"
+
+  case "${subeol_conv,,}" in
+    u*|l*) sed 's/\r$\|$//g'   -i "$subfile";;
+    d*|c*) sed 's/\r$\|$/\r/g' -i "$subfile";;
+  esac || true
 }
 
 sub_install() {

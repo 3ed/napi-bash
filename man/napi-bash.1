@@ -27,7 +27,7 @@ Rozszerzenie pliku napisów (domyślnie: txt)
 Dokonuj autodetekcji (domyślnie: nie)
 .br
 Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. Ta funkcja może spowolnić proces pobierania napisów. W razie niepowodzenia, użyta zostanie wartość opcji subext.
-.SS -f=<tekst>, --subfmt-conv=<tekst>
+.SS -F=<tekst>, --subfmt-conv=<tekst>
 Konwertowanie formatu napisów. Puste by wyłączyć. (domyślnie: "")
 .br
 Obsługiwane są następujące formaty: „fab”, „microdvd”, „mpl2”, „subviewer”, „subrip”, „tmplayer”.
@@ -35,6 +35,10 @@ Obsługiwane są następujące formaty: „fab”, „microdvd”, „mpl2”, �
 Konwertowanie kodowania znaków. Puste by wyłączyć. (domyślnie: "")
 .br
 Obsługiwane kodowania to: „UTF-8”, „ISO-8859-2”, „WINDOWS-1252”
+.SS -E=<tekst>, --subeol-conv=<tekst>
+Konwertowanie typu oznaczenia końca linii. Puste by wyłączyć. (domyślnie: "")
+.br
+Obsługiwane typy to: „Dos”/„CRLF” lub „Unix”/„LF”
 .SS -d=<od-do>, --depth=<od-do>
 Głębia przeszukiwania rekursywnego (domyślnie: ""). Przykładowe wartości <od-do>:
 .br
