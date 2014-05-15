@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r VERSION="0.40"
+declare -r VERSION="0.41"
 declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
 
 subfmt_supported=("fab=txt" "microdvd=sub" "mpl2=txt" "subviewer=sub" "subrip=srt" "tmplayer=txt")
