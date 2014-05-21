@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r VERSION="0.41"
+declare -r VERSION="0.42"
 declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
 
 subfmt_supported=("fab=txt" "microdvd=sub" "mpl2=txt" "subviewer=sub" "subrip=srt" "tmplayer=txt")
@@ -519,27 +519,27 @@ __gen_md5_sums() {
 
 __gen_napi_sums() {
   # Komuś chyba się nudziło...
-	if [ -z "$1" ]; then return 1; fi
+  if [ -z "$1" ]; then return 1; fi
 
-	local md5 napi idx mul add n a p i s y
+  local md5 napi idx mul add n a p i s y
 
-	md5="$1"
+  md5="$1"
 
-	idx=("14" "3"  "6"  "8"  "2")
-	mul=("2"  "2"  "5"  "4"  "3")
-	add=("0"  "13" "16" "11" "5")
+  idx=("14" "3"  "6"  "8"  "2")
+  mul=("2"  "2"  "5"  "4"  "3")
+  add=("0"  "13" "16" "11" "5")
 
-	for p in ${!idx[*]}; do
-		n="${add[p]}"
-		a="${mul[p]}"
-		p="${idx[p]}"
+  for p in ${!idx[*]}; do
+    n="${add[p]}"
+    a="${mul[p]}"
+    p="${idx[p]}"
 
     i="$[n + $(printf "%d" "0x${md5:p:1}")]"
-		s="$(printf "%d" "0x${md5:i:2}")"
-		y="$(printf "%x" "$[s*a]")"
+    s="$(printf "%d" "0x${md5:i:2}")"
+    y="$(printf "%x" "$[s*a]")"
 
-		napi+="${y:${#y}-1:1}"
-	done
+    napi+="${y:${#y}-1:1}"
+  done
 
   echo $napi
 }
@@ -598,7 +598,7 @@ napi_poll() {
       _subext="$(subfmt_convert "${childARG[@]}")" || napi_msg "${childARG[1]}" "$?"
 
       # Instalowanie napisów
-      subext="${_subext:-"txt"}" sub_install "${childARG[@]}"
+      subext="${_subext:-"${subext:-"txt"}"}" sub_install "${childARG[@]}"
       childARG[0]=$?
     fi
 
@@ -676,46 +676,153 @@ __download() {
   "$BIN_7z" x -y -so -piBlm8NTigvru0Jr0 "$dlfile" > "$subfile" 2>/dev/null
   test -f "$dlfile" && unlink "$dlfile"
 
-  # PLIK JEST PUSTY - BRAK NAPISÓW
+  # PLIK JEST PUST (A NIE POWINIEN)
   if ! [ -s "$subfile" ]; then
     unlink "$subfile"
-    return 1
+    return 202
   fi
 
   return 0
 }
 
-subfmt_convert__subext_autodetect() {
-  local subfile="$1" output
+subfmt_convert__fps__mplayer() {
+  local bin="$1" fid="$2"
+  local output="$(LANG=C "$bin" \
+    -really-quiet \
+    -vo null \
+    -ao null \
+    -frames 1 \
+    -identify \
+    "${files[$fid]}" 2> /dev/null)" \
+    && [[ "$output" =~ 'ID_VIDEO_FPS='([0-9.]*) ]] \
+    && echo "${BASH_REMATCH[1]}"
+}
 
-  if enabled "$subext_autodetect"; then
-    output="$("$BIN_subotage" -gi "$subfile" 2>&1)"
+subfmt_convert__fps__mpv() {
+  local bin="$1" fid="$2"
+  local output="$(LANG=C "$bin" \
+      --playing-msg='===FPS=== ${=fps}'  \
+      --vo=null \
+      --ao=null \
+      --frames=1 \
+      --quiet \
+      --no-cache \
+      --no-config \
+      "${files[$fid]}")" \
+    && [[ "$output" =~ '===FPS=== '([0-9.]*) ]] \
+    && echo "${BASH_REMATCH[1]}"
+}
 
-    array__get_opt "${output%% *}" "${subfmt_supported[@]}" && return 0
+subfmt_convert__fps__mediainfo() {
+  local bin="$1" fid="$2"
+  local output="$(LANG=C "$bin" --Output='Video;%FrameRate%' "${files[$fid]}")" \
+    && echo $output
+}
 
-    echo "$subext"
-    return 100
-  fi
+subfmt_convert__fps__ffprobe() {
+  test -n "$BIN_bc" || BIN_bc="$(findbin bc)" || return 1
 
-  echo "$subext"
+  local bin="$1" fid="$2" i
+  local output="$(LANG=C "$bin" \
+      "${files[$fid]}" \
+      -v 0 \
+      -select_streams v \
+      -print_format csv \
+      -show_entries stream=avg_frame_rate,r_frame_rate)" \
+    && [[ "$output" =~ stream,([0-9/]*),([0-9/]*) ]] \
+    || return 1
+
+  for i in 1 2; do
+    if [ "${BASH_REMATCH[i]}" != "0/0" ]; then
+      echo "scale=3; ${BASH_REMATCH[i]}" | LANG=C "$BIN_bc" && return 0
+    fi
+  done
+
+  return 1
+}
+
+subfmt_convert__fps() {
+  test "${#subfmt_convert_fps_f[@]}" = "0" && return 1
+
+  local fid="$1"
+  local i b f fps
+
+  for ((i=0; i <= ${#subfmt_convert_fps_f[@]}; i++)); do
+    b="${subfmt_convert_fps_b[i]}"
+    f="${subfmt_convert_fps_f[i]}"
+    fps="$(subfmt_convert__fps__$f "$b" "$fid")" \
+      && LANG=C printf "%.3f" "$fps" \
+      && return 0
+  done
+
+  return 1
 }
 
 subfmt_convert() {
-  local md5="$3" napi="$4"
+  # Wyjdź jeśli nie ustawiono: subext_autodetect i subfmt_conv
+  enabled "$subext_autodetect" || test -n "$subfmt_conv" || return 0
+
+  # Zmienne lokalne
+  local fid="$1" md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
   local subftmp="$CACHE/_${md5}_${napi}.sub.tmp"
-  local output i
+  local output ifmt iext i fps_opts=""
 
-  if [ -z "$subfmt_conv" ]; then
-    subfmt_convert__subext_autodetect "$subfile"
-    return $?
+  # Detekcja (potrzebne dla obu: subext_autodetect i subfmt_conv)
+  ifmt="$("$BIN_subotage" -gi "$subfile" 2>&1)" || return 100
+
+  # Nadpisać subext danymi z detekcji?
+  if enabled "$subext_autodetect"; then
+    iext="$(array__get_opt "${ifmt%% *}" "${subfmt_supported[@]}")" || return 100
+  else
+    iext="${subext:-"txt"}"
   fi
 
-  output="$("$BIN_subotage" -i "$subfile" -o "$subftmp" -of "$subfmt_conv" 2>&1)"
+  # Zatrzymaj tutaj jeśli nie ustawiono subfmt_conv
+  if [ -z "$subfmt_conv" ]; then
+    echo $iext
+    return 0
+  fi
 
+  # Konwersja nie jest potrzebna, plik już jest w tym formacie
+  test "$subfmt_conv" = "${ifmt%% *}" \
+    && echo "$iext" \
+    && return 0
+
+  # Jedyny obsługiwany format, który wymaga FPS pliku filmowego to microdvd
+  test "$subfmt_conv" = "microdvd" && fps_opts="-fo"
+  test "${ifmt%% *}"  = "microdvd" && fps_opts="-fi"
+
+  # Wczytywanie FPS dla microdvd
+  if [ -n "$fps_opts" ]; then
+    set -- $ifmt
+    if [ -n "$3" ] && test "$3" != "0"; then
+      fps_opts+=" $3"
+    else
+      if ! fps_opts+=" $(subfmt_convert__fps $fid)"; then
+        echo "$iext"
+        return 101
+      fi
+    fi
+  fi
+
+  # Czas wygasania napisu
+  local lasting_time_opts
+  test -n "$subfmt_lasting_time" \
+    && test -z "${subfmt_lasting_time//[0-9]/}" \
+    && lasting_time_opts="--lasting-time $subfmt_lasting_time"
+
+  # Konwertowanie
+  output="$("$BIN_subotage" $fps_opts $lasting_time_opts \
+    -if "${ifmt%% *}" \
+    -i "$subfile" \
+    -o "$subftmp" \
+    -of "$subfmt_conv" 2>&1)"
+
+  # Sprawdzanie wyniku konwersji
   if [[ "$output" =~ "An error occured" ]]; then
     if ! [[ "$output" =~ "No convertion is needed" ]]; then
-      subfmt_convert__subext_autodetect "$subfile"
+      echo "$iext"
       return 101
     fi
   else
@@ -725,8 +832,7 @@ subfmt_convert() {
   test -f "$subftmp" && unlink "$subftmp"
 
   enabled "$subext_autodetect" \
-    && array__get_opt "$subfmt_conv" "${subfmt_supported[@]}" \
-    || echo "$subext"
+    && array__get_opt "$subfmt_conv" "${subfmt_supported[@]}"
 
   return 0
 }
@@ -862,10 +968,27 @@ setup_subotage() {
       warn "Nieobsługiwana format napisów dla subfmt_conv, pomijam..."
   esac
 
-  if ! BIN_subotage="$(findbin subotage.sh subotage)"; then
+  if BIN_subotage="$(findbin subotage.sh subotage)"; then
+    test -z "$subfmt_conv" || setup_subotage__fps
+  else
     subfmt_conv=""
     subext_autodetect=0
     warn "Aby móc korzystać z opcji subfmt_conv, zainstaluj subotage..."
+  fi
+}
+
+setup_subotage__fps() {
+  local i bin
+
+  for i in ffprobe mediainfo mplayer mpv; do
+    if bin="$(findbin $i)"; then
+      subfmt_convert_fps_b+=("$bin")
+      subfmt_convert_fps_f+=("$i")
+    fi
+  done
+
+  if [ "${#subfmt_convert_fps_f[@]}" = "0" ]; then
+    warn "Konwersja formatów wymaga detekcji ilości klatek na sekundę. Zainstaluj: ffmpeg, mediainfo, mplayer lub mpv"
   fi
 }
 

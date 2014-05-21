@@ -70,8 +70,10 @@ Wyświetlaj raport końcowy (fałsz/prawda) #0/1
 Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... (fałsz/prawda) #0/1
 .SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
 .B Modyfikujesz na własną odpowiedzialność!
-\".SS subfmt_supported=("format=rozszerzenie" ....) (może ulec zmianie)
-\"#Obsługiwane formaty napisów i ich domyślne rozszerzenia.
+.SS subfmt_supported=("format=rozszerzenie" ....) [może ulec zmianie]
+Obsługiwane formaty napisów i ich domyślne rozszerzenia.
+.SS subfmt_lasting_time="3000"
+Minimalny czas wyświetlania linijki w ms dla napisów konwertowanych z formatu w którym nie ma określonego czasu wygasania.
 .SS gui_msg_fmt="gui_xml"
 .SS cli_msg_fmt="cli_esc"
 .SS gui_raport_fmt="gui_xml"
