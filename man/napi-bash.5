@@ -11,7 +11,7 @@ Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanym
 .SH OPCJE KONFIGURACYJNE
 .SS
 .nf
-suboverwrite, skipifexist, colors, subext, subext_autodetect, subfmt_conv, subcp_conv
+suboverwrite, skipifexist, colors, subext, subext_autodetect, subext-prefix, subfmt_conv, subcp_conv, subeol_conv
 .fi
 .TS
 tab(#);
@@ -28,6 +28,8 @@ _
 subext=*#-x=*, --subext=*
 _
 subext_autodetect=*#-X=*, --subext-autodetect=*
+_
+subext-prefix=*#-P=*, --subext-prefix=*
 _
 subfmt_conv=*#-F=*, --subfmt-conv=*
 _

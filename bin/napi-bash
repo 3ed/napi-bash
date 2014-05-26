@@ -129,6 +129,10 @@ Opcje:
   -X=<bool>, --subext-autodetect=<bool>, --(no-)subext-autodetect
       Przeprowadzić autodetekcji (ustawione: $subext_autodetect).
 
+  -P=<tekst>, --subext-prefix=<tekst>
+      Dodatkowy przedrostek przed rozszerzeniem pliku. Puste by
+      wyłączyć. (Ustawione: "$subext_prefix")
+
   -F=<tekst>, --subfmt-conv=<tekst>
       Format napisów. Puste by wyłączyć. (ustawione: "$subfmt_conv")
 
@@ -204,6 +208,7 @@ get_ARGV() {
       -E=*|--subeol-conv=*) subeol_conv="${opt#*=}";;
       -C=*|--subcp-conv=*) subcp_conv="${opt#*=}" ;;
       -x=*|--subext=*) subext="${opt#*=}" ;;
+      -P=*|--subext-prefix=*) subext_prefix="${opt#*=}" ;;
       -d=*|--depth=*) get_ARGV__parse_depth "${opt#*=}";;
       --debug=*)
         DEBUG=1
@@ -295,13 +300,14 @@ get_ARGV__add_video_to_filelist() {
     || return 1
 
   if enabled "$subskipifexist"; then
+    local pref="${subext_prefix:+"."}$subext_prefix"
     if enabled "$subext_autodetect"; then
       # TODO "ułądnić"; Pomjać z opcją overwrite?
       for i in "${subfmt_supported[@]}"; do
-        test -f "${1%.*}.${i#*=}" && return 0
+        test -f "${1%.*}$pref.${i#*=}" && return 0
       done
     fi
-    test -f "${1%.*}.$subext" && return 0
+    test -f "${1%.*}$pref.$subext" && return 0
   fi
 
   files+=("$1")
@@ -909,23 +915,26 @@ subeol_convert() {
 sub_install() {
   local fid="$2" md5="$3" napi="$4"
 
-  local subfile="$CACHE/_${md5}_${napi}.sub"
-  local npath="${files[$fid]%.*}"
+  local path="${files[$fid]%.*}"
+  local pref="${subext_prefix:+"."}$subext_prefix"
+
+  local from="$CACHE/_${md5}_${napi}.sub"
+  local to="$path$pref.$subext"
 
   # ILITERACJA W NAZWIE W PRZYPADKU BRAKU PRZYWOLENIA NA NADPIS
-  if [ -e "$npath.$subext" -a "$suboverwrite" == "0" ]; then
+  if [ -e "$to" -a "$suboverwrite" == "0" ]; then
     local -i c
     for ((c=0; $c < 100; c++)); do
-      test -f "$npath.$c.$subext" || break
+      test -f "$path.$c$pref.$subext" || break
     done
-    npath="$npath.$c"
+    to="$path.$c$pref.$subext"
   fi
 
-  cat "$subfile" > "$npath.$subext"
+  cat "$from" > "$to"
 
   # GDY PLIK JEST PUSTY
-  if [ ! -s "$npath.$subext" ]; then
-    unlink "$npath.$subext"
+  if [ ! -s "$to" ]; then
+    unlink "$to"
     return 3
   fi
 

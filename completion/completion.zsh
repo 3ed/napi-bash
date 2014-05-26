@@ -12,6 +12,7 @@ _napi-bash() {
     '(-X --subext-autodetect)'{-X=,--subext-autodetect=}'[Przeprowadzić autodetekcje]:Przeprowadzić autodetekcji rozszerzenia?:(tak nie)' \
     '(-o --suboverwrite)'{-o=,--suboverwrite=}'[Nadpisuj pliki]:Nadpisywać istniejąe pliki z napisami?:(tak nie)' \
     '(-x --subext)'{-x=,--subext=}'[Rozszerzenie pliku]:Rozszerzenia plików:(sub txt srt)' \
+    '(-P --subext-prefix)'{-P=,--subext-prefix=}'[Przedrostek dla rozszerzenia]:Przedrostek rozszerzeń plików:' \
     '(-F --subfmt-conv)'{-F=,--subfmt-conv=}'[Format napisów]:Format napisów:(fab microdvd mpl2 subviewer subrip tmplayer)' \
     '(-C --subcp-conv)'{-C=,--subcp-conv=}'[Kodowanie znaków]:Kodowanie znaków:(ISO-8859-2 UTF-8 WINDOWS-1252)' \
     '(-E --subeol-conv)'{-E=,--subeol-conv=}'[Konwertowanie typu oznaczenia końca linii]:Koniec linii:(dos unix)' \

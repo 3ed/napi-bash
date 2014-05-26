@@ -21,6 +21,10 @@ _napi-bash() {
       COMPREPLY=( $( compgen -W 'sub txt srt' -- "$cur" ) )
       return 0
       ;;
+    --subext-prefix=*)
+      cur=${cur#*=}
+      return 0
+      ;;
     --subfmt-conv=*)
       cur=${cur#*=}
       COMPREPLY=( $( compgen -W 'fab microdvd mpl2 subviewer subrip tmplayer' -- "$cur" ) )
