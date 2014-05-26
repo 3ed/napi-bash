@@ -1,6 +1,8 @@
 #!/bin/bash
 declare -r VERSION="0.42"
-declare -r config="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash/config"
+declare -r configdir="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash"
+
+config="$configdir/config"
 
 subfmt_supported=("fab=txt" "microdvd=sub" "mpl2=txt" "subviewer=sub" "subrip=srt" "tmplayer=txt")
 
@@ -56,8 +58,63 @@ custom_raport() {
 #-------------------------------------------------------------------------------
 #  Ładowanie konfiguracji..
 #-------------------------------------------------------------------------------
+early() {
+  test -t 1 || colors=0
 
-[ -f "$config" -a -r "$config" ] && . "$config"
+  early__debug "$@"
+  early__config "$@"
+
+  USERBREAK=0
+}
+early__debug() {
+  local opt
+
+  until [ -z "$1" ]; do
+    opt="$1"; shift
+    case "${opt}" in
+      --debug=*)
+        DEBUG=1
+        local debug_log="${opt#*=}"
+        if [ -z "$debug_log" ] || [ -d "$debug_log" ]; then
+          debug_log+="${debug_log:+"/"}napi-bash.$(date +"%s").$$.nb_debug"
+        else
+          if [ -f "$debug_log" ]; then
+            test "${debug_log##*.}" = "nb_debug" || debug_log+=".nb_debug"
+          fi
+        fi
+        exec 2>&-;
+        exec 2<>"$debug_log";
+        set -x;
+        PS4='+ [${LINENO}] ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+        break
+      ;;
+      --)
+        break
+    esac
+  done
+}
+
+early__config() {
+  local opt
+
+  until [ -z "$1" ]; do
+    opt="$1"; shift
+    case "${opt}" in
+      -C=*|--config=*)
+        if [ -f "$configdir/${opt#*=}" ]; then
+          config="$configdir/${opt#*=}"
+        else
+          test -f "${opt#*=}" && config="${opt#*=}"
+        fi
+        break
+      ;;
+      --)
+        break
+    esac
+  done
+
+  test -f "$config" -a -r "$config" && . "$config"
+}
 
 #-------------------------------------------------------------------------------
 #  Podstawowe funkcje..
@@ -150,6 +207,10 @@ Opcje:
   --debug=<plik>
       Tryb debugowy
 
+  -C, --config=<plik>
+      Nazwa konfiguracji lub pełna ścieżka. (Ustawione:
+      ${config:-"$configdir/config"})
+
   -h, --help, --usage
       Wyświetl pomoc
 
@@ -210,21 +271,6 @@ get_ARGV() {
       -x=*|--subext=*) subext="${opt#*=}" ;;
       -P=*|--subext-prefix=*) subext_prefix="${opt#*=}" ;;
       -d=*|--depth=*) get_ARGV__parse_depth "${opt#*=}";;
-      --debug=*)
-        DEBUG=1
-        local debug_log="${opt#*=}"
-        if [ -z "$debug_log" ] || [ -d "$debug_log" ]; then
-          debug_log+="${debug_log:+"/"}napi-bash.$(date +"%s").$$.nb_debug"
-        else
-          if [ -f "$debug_log" ]; then
-            test "${debug_log##*.}" = "nb_debug" || debug_log+=".nb_debug"
-          fi
-        fi
-        exec 2>&-;
-        exec 2<>"$debug_log";
-        set -x;
-        PS4='+ [${LINENO}] ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-      ;;
       --) break ;;
       *) paths+=("$opt")
     esac
@@ -584,6 +630,13 @@ fork__download() {
 }
 
 napi_poll() {
+  CACHE="$(mktemp -u -d -p "${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/" $$.XXXX)"
+  mkdir -p "$CACHE"
+
+  # Obsługa sygnałów / czyszczenie
+  trap 'kill ${childPID[@]} &> /dev/null; rm -rf "$CACHE"' EXIT
+  trap 'USERBREAK=1; kill ${childPID[@]} &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
+
 # Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
 # do komunikacji pomiędzy forkiem a rodzicem
 # kierunek: hash --> main
@@ -1031,20 +1084,14 @@ findbin() {
 #-------------------------------------------------------------------------------
 #  Główny kod / main()
 #-------------------------------------------------------------------------------
-# main() {
-test -t 1 || colors=0
+main() {
+  early "$@"
+  get_ARGV "$@"
+  napi_poll
+  napi_raport
+}
 
-CACHE="$(mktemp -u -d -p "${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/" $$.XXXX)"
-mkdir -p "$CACHE"
-USERBREAK=0
-
-# Obsługa sygnałów / czyszczenie
-trap 'kill ${childPID[@]} &> /dev/null; rm -rf "$CACHE"' EXIT
-trap 'USERBREAK=1; kill ${childPID[@]} &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
-
-get_ARGV "${@}"
-napi_poll    # { child > fifo } & { poll < fifo }
-napi_raport
+main "$@"
 
 exit 0
 # }
