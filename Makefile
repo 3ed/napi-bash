@@ -1,8 +1,7 @@
 PREFIX     ?= /usr/local
 MANPREFIX  ?= $(PREFIX)/share
-COMPPREFIX ?= /usr/share
-COMP_ZSH   ?= $(COMPPREFIX)/zsh/site-functions
-COMP_BASH  ?= $(COMPPREFIX)/bash-completion/completions
+COMP_ZSH   ?= /usr/share/zsh/site-functions
+COMP_BASH  ?= /usr/share/bash-completion/completions
 
 define MAKE_USAGE_DEFINITION
 # PREFIX
@@ -13,16 +12,12 @@ define MAKE_USAGE_DEFINITION
 #   Domyslnie: $$PREFIX/share
 #   Ustawione: $(MANPREFIX)
 
-# COMPPREFIX
-#   Domyslnie: /usr/share
-#   Ustawione: $(COMPPREFIX)
-#
-# COMP_ZSH
-#   Domyslnie: $$COMPPREFIX/zsh/site-functions/
+# COMP_ZSH     [ustaw puste by pominac instalacje]
+#   Domyslnie: /usr/share/zsh/site-functions
 #   Ustawione: $(COMP_ZSH)
 #
-# COMP_BASH
-#   Domyslnie: $$COMPPREFIX/bash-completion/completions
+# COMP_BASH    [ustaw puste by pominac instalacje]
+#   Domyslnie: /usr/share/bash-completion/completions
 #   Ustawione: $(COMP_BASH)
 
 # DESTDIR
@@ -38,9 +33,9 @@ ifeq ($(MANPREFIX),)
 	$(error Zmienna MANPREFIX jest pusta..)
 endif
 
-help: help-prefix
+help: help-var
 
-help-prefix:
+help-var:
 	@echo "$$MAKE_USAGE_DEFINITION"
 
 install:

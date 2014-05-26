@@ -1,10 +1,8 @@
 ------------------------
    OPCJE INSTALACYJNE
 ------------------------
-Domyślne opcje:
-  PREFIX="/usr/local"
-  MANPREFIX="$(PREFIX)/share"
-  DESTDIR=""
+Wykonaj polecenie:
+  make help
 
 ------------------------
        INSTALACJA
