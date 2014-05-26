@@ -208,6 +208,9 @@ get_ARGV() {
       --debug=*)
         DEBUG=1
         local debug_log="${opt#*=}"
+        if [ -f "$debug_log" ]; then
+          test "${debug_log##*.}" = "nb_dlog" || debug_log+=".nb_dlog"
+        fi
         exec 2>&-;
         exec 2<>"${debug_log:-"napi-bash.debug.log"}";
         set -x;
@@ -686,20 +689,20 @@ __download() {
 }
 
 subfmt_convert__fps__mplayer() {
-  local bin="$1" fid="$2"
+  local bin="$1" file="$2"
   local output="$(LANG=C "$bin" \
     -really-quiet \
     -vo null \
     -ao null \
     -frames 1 \
     -identify \
-    "${files[$fid]}" 2> /dev/null)" \
+    "$file" 2> /dev/null)" \
     && [[ "$output" =~ 'ID_VIDEO_FPS='([0-9.]*) ]] \
     && echo "${BASH_REMATCH[1]}"
 }
 
 subfmt_convert__fps__mpv() {
-  local bin="$1" fid="$2"
+  local bin="$1" file="$2"
   local output="$(LANG=C "$bin" \
       --playing-msg='===FPS=== ${=fps}'  \
       --vo=null \
@@ -708,23 +711,23 @@ subfmt_convert__fps__mpv() {
       --quiet \
       --no-cache \
       --no-config \
-      "${files[$fid]}")" \
+      "$file")" \
     && [[ "$output" =~ '===FPS=== '([0-9.]*) ]] \
     && echo "${BASH_REMATCH[1]}"
 }
 
 subfmt_convert__fps__mediainfo() {
-  local bin="$1" fid="$2"
-  local output="$(LANG=C "$bin" --Output='Video;%FrameRate%' "${files[$fid]}")" \
+  local bin="$1" file="$2"
+  local output="$(LANG=C "$bin" --Output='Video;%FrameRate%' "$file")" \
     && echo $output
 }
 
 subfmt_convert__fps__ffprobe() {
   test -n "$BIN_bc" || BIN_bc="$(findbin bc)" || return 1
 
-  local bin="$1" fid="$2" i
+  local bin="$1" file="$2" i
   local output="$(LANG=C "$bin" \
-      "${files[$fid]}" \
+      "$file" \
       -v 0 \
       -select_streams v \
       -print_format csv \
@@ -750,7 +753,7 @@ subfmt_convert__fps() {
   for ((i=0; i <= ${#subfmt_convert_fps_f[@]}; i++)); do
     b="${subfmt_convert_fps_b[i]}"
     f="${subfmt_convert_fps_f[i]}"
-    fps="$(subfmt_convert__fps__$f "$b" "$fid")" \
+    fps="$(subfmt_convert__fps__$f "$b" "${files[$fid]}")" \
       && LANG=C printf "%.3f" "$fps" \
       && return 0
   done

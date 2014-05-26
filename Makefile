@@ -21,7 +21,9 @@ help:
 install:
 	make install -C bin
 	make install -C man
+	make install -C completion
 
 uninstall:
 	make uninstall -C bin
 	make uninstall -C man
+	make uninstall -C completion
