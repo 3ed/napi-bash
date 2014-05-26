@@ -208,11 +208,15 @@ get_ARGV() {
       --debug=*)
         DEBUG=1
         local debug_log="${opt#*=}"
-        if [ -f "$debug_log" ]; then
-          test "${debug_log##*.}" = "nb_dlog" || debug_log+=".nb_dlog"
+        if [ -z "$debug_log" ] || [ -d "$debug_log" ]; then
+          debug_log+="${debug_log:+"/"}napi-bash.$(date +"%s").$$.nb_debug"
+        else
+          if [ -f "$debug_log" ]; then
+            test "${debug_log##*.}" = "nb_debug" || debug_log+=".nb_debug"
+          fi
         fi
         exec 2>&-;
-        exec 2<>"${debug_log:-"napi-bash.debug.log"}";
+        exec 2<>"$debug_log";
         set -x;
         PS4='+ [${LINENO}] ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
       ;;

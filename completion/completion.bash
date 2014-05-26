@@ -38,12 +38,12 @@ _napi-bash() {
       ;;
     --depth=*)
       cur=${cur#*=}
-      COMPREPLY=( $( compgen -W '0- 1 2 3 4 5 6 7 8 -9' -- "$cur" ) )
+      COMPREPLY=( $( compgen -W '0- 1- 2- 3- 4- 5- 6- 7- 8- 9-' -- "$cur" ) )
       return 0
       ;;
     --debug=*)
       cur=${cur#*=}
-      _filedir
+      _filedir -f -g '\*.nb_debug'
       return 0
       ;;
     *) if [ "${cur:0:1}" != "-" ]; then _filedir; return 0; fi
