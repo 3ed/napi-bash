@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r VERSION="0.42"
+declare -r VERSION="0.43"
 declare -r configdir="${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash"
 
 config="$configdir/config"
