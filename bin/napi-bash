@@ -56,15 +56,13 @@ custom_raport() {
 
 
 #-------------------------------------------------------------------------------
-#  Ładowanie konfiguracji..
+#  Specjalne funkcje wczesnego ładowania
 #-------------------------------------------------------------------------------
 early() {
   test -t 1 || colors=0
 
   early__debug "$@"
   early__config "$@"
-
-  USERBREAK=0
 }
 early__debug() {
   local opt
@@ -100,7 +98,7 @@ early__config() {
   until [ -z "$1" ]; do
     opt="$1"; shift
     case "${opt}" in
-      -C=*|--config=*)
+      --config=*)
         if [ -f "$configdir/${opt#*=}" ]; then
           config="$configdir/${opt#*=}"
         else
@@ -207,7 +205,7 @@ Opcje:
   --debug=<plik>
       Tryb debugowy
 
-  -C, --config=<plik>
+  --config=<plik>
       Nazwa konfiguracji lub pełna ścieżka. (Ustawione:
       ${config:-"$configdir/config"})
 
@@ -632,6 +630,7 @@ fork__download() {
 napi_poll() {
   CACHE="$(mktemp -u -d -p "${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/" $$.XXXX)"
   mkdir -p "$CACHE"
+  USERBREAK=0
 
   # Obsługa sygnałów / czyszczenie
   trap 'kill ${childPID[@]} &> /dev/null; rm -rf "$CACHE"' EXIT
@@ -1094,4 +1093,3 @@ main() {
 main "$@"
 
 exit 0
-# }

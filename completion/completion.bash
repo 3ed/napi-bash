@@ -45,6 +45,11 @@ _napi-bash() {
       COMPREPLY=( $( compgen -W '0- 1- 2- 3- 4- 5- 6- 7- 8- 9-' -- "$cur" ) )
       return 0
       ;;
+    --config=*)
+      cur=${cur#*=}
+      _filedir -f -g '\*.config'
+      return 0
+      ;;
     --debug=*)
       cur=${cur#*=}
       _filedir -f -g '\*.nb_debug'

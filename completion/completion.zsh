@@ -18,6 +18,7 @@ _napi-bash() {
     '(-E --subeol-conv)'{-E=,--subeol-conv=}'[Konwertowanie typu oznaczenia końca linii]:Koniec linii:(dos unix)' \
     '(-d --depth)'{-d=,--depth=}'[Głębia przeszukiwania rekursywnego]:Głębia od-do:' \
     '(--debug)--debug=[Plik dla dziennika informacji debugowych]:stworz/nadpisz debugiem:_files -g \*.nb_debug' \
+    '(--config)--config=[Alternatywny plik konfiguracyjny]:załaduj ten plik:_files -g \*.config' \
     '(-h --help)'{-h,--help}'[Pomoc programu]::' \
     ':pliki lub foldery:_files'
 }
