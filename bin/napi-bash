@@ -752,7 +752,7 @@ __download() {
 
 subfmt_convert__fps__mplayer() {
   local bin="$1" file="$2"
-  local output="$(LANG=C "$bin" \
+  local output="$("$bin" \
     -really-quiet \
     -vo null \
     -ao null \
@@ -765,7 +765,7 @@ subfmt_convert__fps__mplayer() {
 
 subfmt_convert__fps__mpv() {
   local bin="$1" file="$2"
-  local output="$(LANG=C "$bin" \
+  local output="$("$bin" \
       --playing-msg='===FPS=== ${=fps}'  \
       --vo=null \
       --ao=null \
@@ -780,7 +780,7 @@ subfmt_convert__fps__mpv() {
 
 subfmt_convert__fps__mediainfo() {
   local bin="$1" file="$2"
-  local output="$(LANG=C "$bin" --Output='Video;%FrameRate%' "$file")" \
+  local output="$("$bin" --Output='Video;%FrameRate%' "$file")" \
     && echo $output
 }
 
@@ -788,7 +788,7 @@ subfmt_convert__fps__ffprobe() {
   test -n "$BIN_bc" || BIN_bc="$(findbin bc)" || return 1
 
   local bin="$1" file="$2" i
-  local output="$(LANG=C "$bin" \
+  local output="$("$bin" \
       "$file" \
       -v 0 \
       -select_streams v \
@@ -799,7 +799,7 @@ subfmt_convert__fps__ffprobe() {
 
   for i in 1 2; do
     if [ "${BASH_REMATCH[i]}" != "0/0" ]; then
-      echo "scale=3; ${BASH_REMATCH[i]}" | LANG=C "$BIN_bc" && return 0
+      echo "scale=3; ${BASH_REMATCH[i]}" | "$BIN_bc" && return 0
     fi
   done
 
@@ -809,18 +809,19 @@ subfmt_convert__fps__ffprobe() {
 subfmt_convert__fps() {
   test "${#subfmt_convert_fps_f[@]}" = "0" && return 1
 
-  local fid="$1"
+  local fid="$1" subotage_fps="$2"
   local i b f fps
 
   for ((i=0; i <= ${#subfmt_convert_fps_f[@]}; i++)); do
     b="${subfmt_convert_fps_b[i]}"
     f="${subfmt_convert_fps_f[i]}"
     fps="$(subfmt_convert__fps__$f "$b" "${files[$fid]}")" \
-      && LANG=C printf "%.3f" "$fps" \
+      && printf "%.3f" "$fps" \
       && return 0
   done
 
-  return 1
+  test "${subotage_fps//[0-9]/}" = "." \
+    && printf "%.3f" "$subotage_fps"
 }
 
 subfmt_convert() {
@@ -834,7 +835,7 @@ subfmt_convert() {
   local output ifmt iext i fps_opts=""
 
   # Detekcja (potrzebne dla obu: subext_autodetect i subfmt_conv)
-  ifmt="$("$BIN_subotage" -gi "$subfile" 2>&1)" || return 100
+  ifmt="$(LANG=C "$BIN_subotage" -gi "$subfile" 2>&1)" || return 100
 
   # Nadpisać subext danymi z detekcji?
   if enabled "$subext_autodetect"; then
@@ -861,13 +862,9 @@ subfmt_convert() {
   # Wczytywanie FPS dla microdvd
   if [ -n "$fps_opts" ]; then
     set -- $ifmt
-    if [ -n "$3" ] && test "$3" != "0"; then
-      fps_opts+=" $3"
-    else
-      if ! fps_opts+=" $(subfmt_convert__fps $fid)"; then
-        echo "$iext"
-        return 101
-      fi
+    if ! fps_opts+=" $(LANG=C subfmt_convert__fps "$fid" "$3")"; then
+      echo $iext
+      return 101
     fi
   fi
 
@@ -878,7 +875,7 @@ subfmt_convert() {
     && lasting_time_opts="--lasting-time $subfmt_lasting_time"
 
   # Konwertowanie
-  output="$("$BIN_subotage" $fps_opts $lasting_time_opts \
+  output="$(LANG=C "$BIN_subotage" $fps_opts $lasting_time_opts \
     -if "${ifmt%% *}" \
     -i "$subfile" \
     -o "$subftmp" \
