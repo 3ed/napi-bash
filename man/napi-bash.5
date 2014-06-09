@@ -40,23 +40,72 @@ _
 .TE
 Patrz:
 .BR napi-bash (1)
+.SS auth_nick=login
+Twój login do napiprojektu. Domyślnie puste czyli jako anonim.
+.br
+.B Uwaga:
+transmisja czystym tekstem bez zapamiętywania sesji...
+.SS auth_pass=haslo
+Twoje hasło do napiprojektu. Patrz:
+.B auth_nick
+.SS subfmt_ext[Format]="Rozszerzenie"
+Opcja umożliwia zmianę domyślnego rozszerzenia formatu. Obsługiwanie formaty i ich rozszerzenia:
+.TS
+tab(#);
+|l|l|.
+_
+Format:#Rozszerzenie:
+_
+fab#txt
+_
+microdvd#sub
+_
+mpl2#txt
+_
+subviewer#sub
+_
+subrip#srt
+_
+tmplayer#txt
+_
+.TE
 .SS
 .nf
-videoext='^(3gp|avi|asf|divx|m4v|mkv|mov|mp4|mpe|mpeg|mpg|ogg|ogv|rmvb|wmv|qt)$'
+videoext=(.3gp .avi .asf .divx .m4v .mkv .mov .mp4 .mpe .mpeg .mpg .ogg .ogv .rmvb .wmv .qt)
 .fi
-Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter.
+Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter. Można stosować „Brace expansion”, np:
+.nf
+videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
+.fi
 .SS DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
 Agent pobierania plików (%o wyjściowy; %u adres url)
-.SS msg_status[0]="%2%bPobrano%R dla %i%f"
-.SS msg_status[1]="%1%bBrak napisów%R dla %i%f"
-.SS msg_status[2]="%1Brak uprawnień do zapisu w folderze z plikiem: %f"
-.SS msg_status[3]="%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f"
-.SS msg_status[100]="%1Niepowiodła sie detekcja formatu napisów dla: %f"
-.SS msg_status[101]="%1Niepowiodło się konwertowanie formatu napisów dla: %f"
-.SS msg_status[254]="%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego.."
-.SS msg_status[255]="%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?"
+.SS msg_status[ID]="Treść"
 Format wyjścia dla notyfikacji "Status". Notyfikacja pojawia się za każdym razem gdy program zakończył operacje dla pojedyńczego pliku, chyba że wyłączono w `msg_{cli,gui}_disabled_array'. Zobacz też sekcje
 .B TAGI.
+Domyślne ustawienia:
+.TS
+tab(#);
+|l|l|.
+_
+ID:#Treść:
+_
+0#%2%bPobrano%R dla %i%f
+_
+1#%1%bBrak napisów%R dla %i%f
+_
+2#%1Brak uprawnień do zapisu w folderze z plikiem: %f
+_
+3#%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f
+_
+100#%1Niepowiodła sie detekcja formatu napisów dla: %f
+_
+101#%1Niepowiodło się konwertowanie formatu napisów dla: %f
+_
+254#%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego..
+_
+255#%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?
+_
+.TE
 .SS msg_cli_disabled_array=()
 .SS msg_gui_disabled_array=(0 1)
 Wyłącz info dla następujących treści (patrz na msg_status) #tablica id
@@ -72,8 +121,6 @@ Wyświetlaj raport końcowy (fałsz/prawda) #0/1
 Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... (fałsz/prawda) #0/1
 .SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
 .B Modyfikujesz na własną odpowiedzialność!
-.SS subfmt_supported=("format=rozszerzenie" ....) [może ulec zmianie]
-Obsługiwane formaty napisów i ich domyślne rozszerzenia.
 .SS subfmt_lasting_time="3000"
 Minimalny czas wyświetlania linijki w ms dla napisów konwertowanych z formatu w którym nie ma określonego czasu wygasania.
 .SS gui_msg_fmt="gui_xml"
