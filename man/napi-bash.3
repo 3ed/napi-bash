@@ -1,0 +1,35 @@
+.\" Manpage for napi-bash.conf.
+.TH NAPI-BASH 3 "2014-06-11" "0.50" "Programowanie napi-bash"
+.SH NAZWA
+Przeprogramowywanie napi-bash lub używanie jako biblioteki dla zewnętrznego programu.
+.br
+.B UWAGA:
+To dopiero wczesna wersja przed-rozwojowa, w każdej chwili mogą nastąpić zmiany...
+.SH SKŁADNIA
+.SS Bash (bezpośrednio)
+source /usr/bin/napi-bash
+.br
+moja_main() {
+.br
+  local -a files
+.br
+  if get_ARGV__generate_files "/plik" "/folder/"; then
+.br
+    napi_poll
+.br
+  fi
+.br
+  ini_raport # lub np: xml_raport
+.br
+}
+.SS Perl
+TODO
+.SS Python
+TODO
+.SS C
+TODO
+.SH FUNKCJE
+.SH ZMIENNE
+.SH ZOBACZ TEŻ
+.BR napi-bash (1)
+.BR napi-bash (5)

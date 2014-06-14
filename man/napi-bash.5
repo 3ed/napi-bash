@@ -48,6 +48,8 @@ transmisja czystym tekstem bez zapamiętywania sesji...
 .SS auth_pass=haslo
 Twoje hasło do napiprojektu. Patrz:
 .B auth_nick
+.SS auth_login=tak/nie
+Określa czy użytkownik ma się automatycznie zalogowywać. Gdy wybrano „nie”, można manualnie użyć argumentu programu: „--login=tak”
 .SS subfmt_ext[Format]="Rozszerzenie"
 Opcja umożliwia zmianę domyślnego rozszerzenia formatu. Obsługiwanie formaty i ich rozszerzenia:
 .TS
@@ -77,6 +79,8 @@ Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter. Moż
 .nf
 videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
 .fi
+.SS videoext_dironly=tak
+Porównuj końcówki nazw plików tylko dla tych które znajdują się w podanym przez użytkownika folderze.
 .SS DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
 Agent pobierania plików (%o wyjściowy; %u adres url)
 .SS msg_status[ID]="Treść"
@@ -119,6 +123,12 @@ Format wyjścia dla notyfikacji "Raport". Notyfikacja pojawia się tylko raz tu�
 Wyświetlaj raport końcowy (fałsz/prawda) #0/1
 .SS gui_int_warn=1
 Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... (fałsz/prawda) #0/1
+.SH FUNKCJE
+Można wykonywać wszyskie polecenia powłoki (nie polecam nadpisywania) plus te wbudowane:
+.SS enabled "$zmienna"
+Sprawdza czy zawartość "$zmienna" jest prawdą czy fałszem.
+.SS multieq "$zmienna" "1" "2" .. "n"
+Sprawdza czy "$zmienna" jest identyczna z którąś kolejną opcją.
 .SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
 .B Modyfikujesz na własną odpowiedzialność!
 .SS subfmt_lasting_time="3000"
@@ -171,6 +181,26 @@ Za pomocą tej funkcji użytkownik może podmienić treść raportu na np. bardz
 %8 domyślny kolory czcionki,
 .br
 %9 domyślny kolory czcionki.
+.SH PRZYKŁAD
+subfmt_conv=subrip
+.br
+subcp_conv=WINDOWS
+.br
+subeol_conv=dos
+.br
+subext_prefix=pl
+.br
+videoext_for=dir
+.br
+if multieq "$videoext_for" "file" "all"; then
+.br
+  videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt}{,.part})
+.br
+elif [ "$videoext_for" = "dir" ]; then
+.br
+  videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
+.br
+fi
 .SH BŁĘDY
 Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projektu.
 .SH ZOBACZ TEŻ
