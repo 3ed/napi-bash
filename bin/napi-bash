@@ -20,6 +20,7 @@ subeol_conv=""
 
 subext="txt"
 subext_autodetect=nie
+subext_prefix=""
 suboverwrite=nie
 subskipifexist=nie
 colors=tak
@@ -85,27 +86,28 @@ multieq() {
 # Ładowanie konfiguracji (uwaga: do tego miejsca można nadpisać configiem)
 #-------------------------------------------------------------------------------
 load_config() {
-  local opt config="$NB_CONFIGDIR/config"
+  local opt config
 
   until [ -z "$1" ]; do
     opt="$1"; shift
     case "${opt}" in
       --config=*)
-        if [ -f "$NB_CONFIGDIR/${opt#*=}" -a -r "$NB_CONFIGDIR/${opt#*=}" ]; then
-          config="$NB_CONFIGDIR/${opt#*=}"
-        elif [ -f "${opt#*=}" -a -r "${opt#*=}"]; then
+        if [ -f "${opt#*=}" -a -r "${opt#*=}"]; then
           config="${opt#*=}"
-        elif [ -f "$config" -a -r "$config" ]; then
-          true
-        else
-          return 0
+        elif [ -f "$NB_CONFIGDIR/${opt#*=}" -a -r "$NB_CONFIGDIR/${opt#*=}" ]; then
+          config="$NB_CONFIGDIR/${opt#*=}"
         fi
         break
       ;;
       --)
-        return 0
+        break
     esac
   done
+
+  if [ -z "$config" ]; then
+    config="$NB_CONFIGDIR/config"
+    test -f "$config" -a -r "$config" || return 1
+  fi
 
   source "$config"
 }
@@ -118,43 +120,43 @@ unalias exit
 #  Podstawowe funkcje..
 #-------------------------------------------------------------------------------
 msg() {
-  local print_msg_fmt_str
+  local print_msg_fmt_ret
   print_msg_fmt "0;32;1" "==>" "0;1" "$1"\
-    && printfo STDOUT "$print_msg_fmt_str"
+    && printfo STDOUT "$print_msg_fmt_ret"
 
 }
 msg2() {
-  local print_msg_fmt_str
+  local print_msg_fmt_ret
   print_msg_fmt "0;34" "  -->" "0" "$1"\
-    && printfo STDOUT "$print_msg_fmt_str"
+    && printfo STDOUT "$print_msg_fmt_ret"
 }
 
 info() {
-  local print_msg_fmt_str
+  local print_msg_fmt_ret
   print_msg_fmt "0;35;1" "Info:" "0" "$1" \
-    && printfo STDOUT "$print_msg_fmt_str"
+    && printfo STDOUT "$print_msg_fmt_ret"
 
   return 1
 }
 warn() {
-  local print_msg_fmt_str
+  local print_msg_fmt_ret
   print_msg_fmt "0;33;1" "Uwaga:" "0" "$1" \
-    && printfo STDERR "$print_msg_fmt_str"
+    && printfo STDERR "$print_msg_fmt_ret"
   test -n "$DISPLAY" && enabled "$gui_int_warn" && gui_msg "warn" "$1" &> /dev/null &
   return 1
 }
 error() {
-  local print_msg_fmt_str
+  local print_msg_fmt_ret
   print_msg_fmt "0;31;1" "Błąd:" "0" "$1" \
-    && printfo STDERR "$print_msg_fmt_str"
+    && printfo STDERR "$print_msg_fmt_ret"
   test -n "$DISPLAY" && gui_msg "error" "$1" &> /dev/null &
   return 1
 }
 print_msg_fmt() {
   if enabled "$colors"; then
-    printf -v print_msg_fmt_str '\e[%sm%s\e[%sm %s...\e[0m\n' "$@"
+    printf -v print_msg_fmt_ret '\e[%sm%s\e[%sm %s...\e[0m\n' "$@"
   else
-    printf -v print_msg_fmt_str '%s %s...\n' "$2" "$4"
+    printf -v print_msg_fmt_ret '%s %s...\n' "$2" "$4"
   fi
 }
 
@@ -523,7 +525,7 @@ fill_fields() {
   shift 3
 
   local -a NB_FIELDS_SUB
-  fill_fields_str=
+  fill_fields_ret=
 
   local -i c=0
 
@@ -533,22 +535,22 @@ fill_fields() {
       let c++
       _ini_fields_$ini "$fmt" "${msg:c:1}" "$@"
     else
-      fill_fields_str+="$ch"
+      fill_fields_ret+="$ch"
     fi
   done
 
   _fmt_fields_$fmt "R"
 
-  #RETURNVAR: $fill_fields_str
+  #RETURNVAR: $fill_fields_ret
 }
 
 # ini fields (put the information)
 _ini_fields_msg() {
   case "$2" in
-    f) fill_fields_str+="${files[$3]##*/}";;
-    d) fill_fields_str+="$3";;
-    e) fill_fields_str+="$4";;
-    %) fill_fields_str+="%";;
+    f) fill_fields_ret+="${files[$3]##*/}";;
+    d) fill_fields_ret+="$3";;
+    e) fill_fields_ret+="$4";;
+    %) fill_fields_ret+="%";;
     *) _fmt_fields_$1 "$2"
   esac
 }
@@ -560,10 +562,10 @@ _ini_fields_raport() {
   done
 
   case "$2" in
-    d) fill_fields_str+="$d";;
-    n) fill_fields_str+="$n";;
-    a) fill_fields_str+="$a";;
-    %) fill_fields_str+="%";;
+    d) fill_fields_ret+="$d";;
+    n) fill_fields_ret+="$n";;
+    a) fill_fields_ret+="$a";;
+    %) fill_fields_ret+="%";;
     *) _fmt_fields_$1 "$2"
   esac
 }
@@ -585,7 +587,7 @@ _fmt_fields_cli_esc() {
     *) return;;
   esac
 
-  fill_fields_str+="\e[0${NB_FIELDS_SUB[1]}${NB_FIELDS_SUB[2]}${NB_FIELDS_SUB[3]}${NB_FIELDS_SUB[0]}m"
+  fill_fields_ret+="\e[0${NB_FIELDS_SUB[1]}${NB_FIELDS_SUB[2]}${NB_FIELDS_SUB[3]}${NB_FIELDS_SUB[0]}m"
 }
 _fmt_fields_gui_xml() {
   local c
@@ -596,7 +598,7 @@ _fmt_fields_gui_xml() {
         test "${NB_FIELDS_SUB[0]:$c:1}" = "$1" && canset=0
       done
       test "$canset" = "1" || return
-      fill_fields_str+="<$1>" && NB_FIELDS_SUB[0]+="$1"
+      fill_fields_ret+="<$1>" && NB_FIELDS_SUB[0]+="$1"
     ;;
     B|I|U)
       local stupidxml_left="" stupidxml_right="" stupidxml_tag="" canunset=0 new_GUIFMT=""
@@ -617,11 +619,11 @@ _fmt_fields_gui_xml() {
 
       NB_FIELDS_SUB[0]="$new_GUIFMT"
 
-      fill_fields_str+="$stupidxml_left$stupidxml_right"
+      fill_fields_ret+="$stupidxml_left$stupidxml_right"
     ;;
     R)
       for ((c=$[${#NB_FIELDS_SUB[0]}-1]; $c >= 0; c--)); do
-        echo -n "</${NB_FIELDS_SUB[0]:$c:1}>"
+        fill_fields_ret+="</${NB_FIELDS_SUB[0]:$c:1}>"
       done
       unset NB_FIELDS_SUB[0]
     ;;
@@ -638,7 +640,7 @@ napi_msg() {
   # $2 = id błędu
 
   local msg
-  local fill_fields_str
+  local fill_fields_ret
 
   files_stat[$1]=$2
 
@@ -659,16 +661,16 @@ napi_msg() {
 napi_msg_gui() {
   napi_msg__enabled__gui "$3" || return 0
   fill_fields "msg" "$gui_msg_fmt" "$@" \
-    && gui_msg "$3" "$fill_fields_str" &
+    && gui_msg "$3" "$fill_fields_ret" &
 }
 napi_msg_cli() {
   napi_msg__enabled__cli "$3" || return 0
   if [ "$3" = "0" ]; then
     fill_fields "msg" "$cli_msg_fmt" "$@" \
-      && printfo STDOUT "$fill_fields_str\n"
+      && printfo STDOUT "$fill_fields_ret\n"
   else
     fill_fields "msg" "$cli_msg_fmt" "$@" \
-      && printfo STDERR "$fill_fields_str\n"
+      && printfo STDERR "$fill_fields_ret\n"
   fi
 }
 napi_raport() {
@@ -684,13 +686,13 @@ napi_raport() {
 napi_raport_gui() {
   napi_msg__enabled__gui "raport" || return 0
   fill_fields "raport" "$gui_raport_fmt" "$@" \
-    && gui_msg "raport" "$fill_fields_str" &
+    && gui_msg "raport" "$fill_fields_ret" &
 }
 napi_raport_cli() {
   napi_msg__enabled__cli "raport" || return 0
   msg "Raport"
   fill_fields "raport" "$cli_raport_fmt" "$@" \
-    && printfo STDOUT "$fill_fields_str\n"
+    && printfo STDOUT "$fill_fields_ret\n"
 }
 
 #-------------------------------------------------------------------------------
@@ -933,6 +935,7 @@ sub_download() {
 
 subfmt_convert__fps__mplayer() {
   local bin="$1" file="$2"
+  fps_sub=
   local output="$("$bin" \
     -really-quiet \
     -vo null \
@@ -941,11 +944,13 @@ subfmt_convert__fps__mplayer() {
     -identify \
     "$file" 2> /dev/null)" \
     && [[ "$output" =~ 'ID_VIDEO_FPS='([0-9.]*) ]] \
-    && fps="${BASH_REMATCH[1]}"
+    && fps_sub="${BASH_REMATCH[1]}"
+  #RETURNVAR: $fps_sub
 }
 
 subfmt_convert__fps__mpv() {
   local bin="$1" file="$2"
+  fps_sub=
   local output="$("$bin" \
       --playing-msg='===FPS=== ${=fps}'  \
       --vo=null \
@@ -956,22 +961,28 @@ subfmt_convert__fps__mpv() {
       --no-config \
       "$file")" \
     && [[ "$output" =~ '===FPS=== '([0-9.]*) ]] \
-    && fps="${BASH_REMATCH[1]}"
+    && fps_sub="${BASH_REMATCH[1]}"
+  #RETURNVAR: $fps_sub
 }
 
 subfmt_convert__fps__mediainfo() {
   local bin="$1" file="$2"
-  fps="$("$bin" --Output='Video;%FrameRate%' "$file")"
+  fps_sub="$("$bin" --Output='Video;%FrameRate%' "$file")"
+  #RETURNVAR: $fps_sub
 }
 
 subfmt_convert__fps__ffprobe() {
-  test -n "$BIN_bc" || BIN_bc="$(findbin bc)" || return 1
+  fps_sub=
+  if [ -z "$BIN_bc" ]; then
+    local findbin_ret
+    findbin bc && BIN_bc="$findbin_ret" || return 1
+  fi
 
   local bin="$1" file="$2" i
   local output="$("$bin" \
       "$file" \
       -v 0 \
-      -select_streams v \
+      -select_reteams v \
       -print_format csv \
       -show_entries stream=avg_frame_rate,r_frame_rate)" \
     && [[ "$output" =~ stream,([0-9/]*),([0-9/]*) ]] \
@@ -979,31 +990,34 @@ subfmt_convert__fps__ffprobe() {
 
   for i in 1 2; do
     if [ "${BASH_REMATCH[i]}" != "0/0" ]; then
-      fps="$("$BIN_bc" <<< "scale=3;${BASH_REMATCH[i]}")" && return 0
+      fps_sub="$("$BIN_bc" <<< "scale=3;${BASH_REMATCH[i]}")" && return 0
     fi
   done
 
   return 1
+  #RETURNVAR: $fps_sub $BIN_bc
 }
 
 subfmt_convert__fps() {
+  fps_ret=
   test "${#BIN_subotage__fps_f[@]}" = "0" && return 1
 
-  local fid="$1" subotage_fps="$2"
-  local i b f fps
+  local fid="$1" subotage_fps="$2" LANG=C
+  local i b f fps_sub
 
   for ((i=0; i <= ${#BIN_subotage__fps_f[@]}; i++)); do
     b="${BIN_subotage__fps_b[i]}"
     f="${BIN_subotage__fps_f[i]}"
     # subfmt_convert__fps__* ustawiają zmianną fps
     subfmt_convert__fps__$f "$b" "${files[$fid]}" \
-      && [ -n "$fps" ] \
-      && printf "%.3f" "$fps" \
+      && [ -n "$fps_sub" ] \
+      && printf -v fps_ret "%.3f" "$fps_sub" \
       && return 0
   done
 
   test "${subotage_fps//[0-9]/}" = "." \
-    && printf "%.3f" "$subotage_fps"
+    && printf -v fps_ret "%.3f" "$subotage_fps"
+  #RETURNVAR: $fps_ret
 }
 
 subfmt_convert() {
@@ -1016,7 +1030,7 @@ subfmt_convert() {
   local fid="$1" md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
   local subftmp="$CACHE/_${md5}_${napi}.sub.tmp"
-  local output ifmt i fps_opts=""
+  local output ifmt i fps_ret fps_opts=""
 
   # Detekcja (potrzebne dla obu: subext_autodetect i subfmt_conv)
   ifmt="$(LANG=C "$BIN_subotage" -gi "$subfile" 2>&1)" || return 100
@@ -1043,7 +1057,7 @@ subfmt_convert() {
   # Wczytywanie FPS dla microdvd
   if [ -n "$fps_opts" ]; then
     set -- $ifmt
-    if ! fps_opts+=" $(LANG=C subfmt_convert__fps "$fid" "$3")"; then
+    if ! subfmt_convert__fps "$fid" "$3"; then
       return 101
     fi
   fi
@@ -1055,7 +1069,7 @@ subfmt_convert() {
     && lasting_time_opts="--lasting-time $subfmt_lasting_time"
 
   # Konwertowanie
-  output="$(LANG=C "$BIN_subotage" $fps_opts $lasting_time_opts \
+  output="$(LANG=C "$BIN_subotage" $fps_opts$fps_ret $lasting_time_opts \
     -if "${ifmt%% *}" \
     -i "$subfile" \
     -o "$subftmp" \
@@ -1175,15 +1189,12 @@ sub_install() {
 #-------------------------------------------------------------------------------
 #  Sprawdzanie
 #-------------------------------------------------------------------------------
-bash_uri_encode() {
-  LANG=C bash_uri_encode__langc "$@"
-}
-
-bash_uri_encode__langc() {
+uri_encode() {
   # http://stackoverflow.com/questions/296536/urlencode-from-a-bash-script/2027690
-  local string="${1}"
-  local encoded="" o
+  local string="$1" o LANG=C
   local -i i=0
+
+  uri_encode_ret=
 
   for (( i=0 ; i<${#string} ; i++ )); do
     c="${string:$i:1}"
@@ -1192,20 +1203,24 @@ bash_uri_encode__langc() {
       *)
         printf -v o '%%%02x' "'$c"
     esac
-    encoded+="${o}"
+    uri_encode_ret+="${o}"
   done
-  echo "${encoded}"
+
+  #RETURNVAR: $uri_encode_ret
 }
 
 validate_auth() {
   enabled "$auth_login" || return 0
 
   local auth_status="Zły login lub hasło..."
+  local uri_encode_ret
 
-  if [ -n "$auth_nick" -a -n "$auth_pass" ]; then
-    napi_nick="$(bash_uri_encode "$auth_nick")"
-    napi_pass="$(bash_uri_encode "$auth_pass")"
-
+  if [ -n "$auth_nick" -a -n "$auth_pass" ] \
+    && uri_encode "$auth_nick" \
+    && napi_nick="$uri_encode_ret" \
+    && uri_encode "$auth_pass" \
+    && napi_pass="$uri_encode_ret"
+  then
     local url="http://www.napiprojekt.pl/users_check.php?nick=$napi_nick&pswd=$napi_pass"
 
     if downloader "$url" "$CACHE/auth_status.txt"; then
@@ -1222,7 +1237,9 @@ validate_auth() {
 
 setup_var_sublang() { #TODO
   test -n "$sublang" || return 0
-  napi_lang="$(bash_uri_encode "$sublang")" # TODO: sprawdzanie czy język jest obsługiwany
+  local uri_encode_ret
+  uri_encode "$sublang" \
+    && napi_lang="$uri_encode_ret" # TODO: sprawdzanie czy język jest obsługiwany
   unset sublang
   return 0
 }
@@ -1253,7 +1270,9 @@ setup_bin_iconv() {
       return 0
   esac
 
-  if ! BIN_iconv="$(findbin iconv)"; then
+  local findbin_ret
+  if findbin iconv; then
+    BIN_iconv="$findbin_ret"
     subcp_conv=""
     warn "Aby móc korzystać z opcji subcp_conv, zainstaluj iconv..."
   fi
@@ -1275,7 +1294,9 @@ setup_bin_subotage() {
       warn "Nieobsługiwana format napisów dla subfmt_conv, pomijam..."
   esac
 
-  if BIN_subotage="$(findbin subotage.sh subotage)"; then
+  local findbin_ret
+  if findbin subotage.sh subotage; then
+    BIN_subotage="$findbin_ret"
     test -z "$subfmt_conv" || setup_bin_subotage__fps
   else
     subfmt_conv=""
@@ -1285,11 +1306,11 @@ setup_bin_subotage() {
 }
 
 setup_bin_subotage__fps() {
-  local i bin
+  local i bin findbin_ret
 
   for i in ffprobe mediainfo mplayer mpv; do
-    if bin="$(findbin $i)"; then
-      BIN_subotage__fps_b+=("$bin")
+    if findbin $i; then
+      BIN_subotage__fps_b+=("$findbin_ret")
       BIN_subotage__fps_f+=("$i")
     fi
   done
@@ -1300,7 +1321,10 @@ setup_bin_subotage__fps() {
 }
 
 setup_bin_7z() {
-  if ! BIN_7z="$(findbin 7za 7z)"; then
+  local findbin_ret
+  if findbin 7za 7z; then
+    BIN_7z="$findbin_ret"
+  else
     error "Aby móc rozpakować archiwum z napisami zainstaluj p7zip..."
   fi
   #RETURNVAR: BIN_7z
@@ -1308,16 +1332,18 @@ setup_bin_7z() {
 
 findbin() {
   local line
+  findbin_ret=
   while [ -n "$1" ]; do
     while read -d: line; do
       if [ -x "$line/$1" ]; then
-        echo "$line/$1"
+        findbin_ret="$line/$1"
         return 0
       fi
     done <<< "$PATH"
     shift
   done
   return 1
+  #RETURNVAR: $findbin_ret
 }
 
 #-------------------------------------------------------------------------------
