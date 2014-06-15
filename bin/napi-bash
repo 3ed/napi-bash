@@ -257,7 +257,7 @@ Napi-bash opublikowano na licencji GPL3:
   read:   http://www.gnu.org/licenses/gpl-3.0.html
 EOF
 
-	exit 1
+	return 1
 }
 
 ARGV() {
@@ -289,24 +289,25 @@ ARGV() {
     msg "Wyszukiwanie i pobieranie napisów"
   else
     info "Brak plików lub odrzucone przez filtr"
+    return 1
   fi
 }
 
 ARGV__getopts() {
-  local opt bool
+  local opt bool_ret
 
   until [ -z "$1" ]; do
     opt="$1"; shift
     case "${opt}" in
-      -h|--help|--usage) usage ;;
+      -h|--help|--usage) usage; return $? ;;
       -o=*|--suboverwrite=*|--suboverwrite|--no-suboverwrite)
-        ARGV__bool "$opt"; suboverwrite="$bool";;
+        ARGV__bool "$opt"; suboverwrite="$bool_ret";;
       -s=*|--skipifexist=*|--skipifexist|--no-skipifexist)
-        ARGV__bool "$opt"; subskipifexist="$bool";;
+        ARGV__bool "$opt"; subskipifexist="$bool_ret";;
       -c=*|--colors=*|--colors|--no-colors)
-        ARGV__bool "$opt"; colors="$bool";;
+        ARGV__bool "$opt"; colors="$bool_ret";;
       -X=*|--subext-autodetect=*|--subext-autodetect|--no-subext-autodetect)
-        ARGV__bool "$opt"; subext_autodetect="$bool";;
+        ARGV__bool "$opt"; subext_autodetect="$bool_ret";;
       -F=*|--subfmt-conv=*) subfmt_conv="${opt#*=}" ;;
       -E=*|--subeol-conv=*) subeol_conv="${opt#*=}";;
       -C=*|--subcp-conv=*) subcp_conv="${opt#*=}" ;;
@@ -319,7 +320,9 @@ ARGV__getopts() {
       -p=*|--pass=*) auth_pass="${opt#*=}";;
       -L=*|--login=*) auth_login="${opt#*=}";;
       --version) echo "$NB_VERSION"; return 1;;
+      --debug=*|--config=*) true;;
       --) break ;;
+      -*) ARGV__bad_arg l "$opt" || return 1;;
       *) paths+=("$opt")
     esac
   done
@@ -328,18 +331,26 @@ ARGV__getopts() {
     shift
   done
 
-  # RETURN: @paths
+  #RETURNVAR: @paths
+}
+ARGV__bad_arg() {
+  case "$1" in
+    l) error "Niepoprawna opcja: '$2'";;
+    r) error "Nieprawidłowy argument opcji: '$2'";;
+    *) true
+  esac
 }
 
 ARGV__bool() {
   local left="${1%%=*}" right="${1#*=}"
+  bool_ret=nie
 
   if [ "$left" = "$right" ]; then
-    [[ "$left" =~ '^--no-' ]] && bool=nie || bool=tak
+    ! [[ "$left" =~ '^--no-' ]] && bool_ret=tak
   else
-    enabled "$right" && bool=tak || bool=nie
+    enabled "$right" && bool_ret=tak 
   fi
-  # RETURN: $bool
+  #RETURNVAR: $bool_ret
 }
 
 ARGV__parse_depth() {
@@ -354,11 +365,6 @@ ARGV__parse_depth() {
   test -n "$right" && NB_FIND_DEPTH+=("-maxdepth" "$right")
 
   return 0
-}
-
-ARGV__bad_arg() {
-  error "Brakujący lub niepoprawny argument dla '$1'"
-  exit 1
 }
 
 test_filesize() {
@@ -676,7 +682,7 @@ napi_msg_cli() {
 napi_raport() {
   local msg
 
-  if ! msg="`custom_raport`"; then
+  if ! msg="$(custom_raport)"; then
     msg="${msg_raport:-"Łącznie pobrano %i/%a napisów..."}"
   fi
 
@@ -729,9 +735,9 @@ get_hash__napisum() {
     a="${mul[p]}"
     p="${idx[p]}"
 
-    i="$[n + $(printf "%d" "0x${md5sum:p:1}")]"
-    s="$(printf "%d" "0x${md5sum:i:2}")"
-    y="$(printf "%x" "$[s*a]")"
+    printf -v i "%d" "0x${md5sum:p:1}"; i="$[n + i]"
+    printf -v s "%d" "0x${md5sum:i:2}"
+    printf -v y "%x" "$[s*a]"
 
     napisum+="${y:${#y}-1:1}"
   done
@@ -909,7 +915,8 @@ sub_download() {
       "$dlfile")"
 
     if [ "$dlfile_mime" = "text/plain" ]; then
-      local dlfile_source="$(cat "$dlfile")"
+      local dlfile_source
+      read -N 200 dlfile_source < "$dlfile"
       unlink "$dlfile"
       case "${dlfile_source,,}" in
         *"przerwa techniczna"*) return 200;;
@@ -1029,7 +1036,7 @@ subfmt_convert() {
   # Zmienne lokalne
   local fid="$1" md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
-  local subftmp="$CACHE/_${md5}_${napi}.sub.tmp"
+  local subftmp="$CACHE/_${md5}_${napi}.subfmt.tmp"
   local output ifmt i fps_ret fps_opts=""
 
   # Detekcja (potrzebne dla obu: subext_autodetect i subfmt_conv)
@@ -1081,7 +1088,7 @@ subfmt_convert() {
       return 101
     fi
   else
-    cat "$subftmp" > "$subfile"
+    install -p -T "$subftmp" "$subfile" &> /dev/null
   fi
 
   test -f "$subftmp" && unlink "$subftmp"
@@ -1098,12 +1105,8 @@ subcp_convert() {
   test -n "$subcp_conv" || return 0
   local md5="$3" napi="$4"
 
-  # LOKALIZACJE PLIKÓW
+  # LOKALIZACJE PLIKU
   local subfile="$CACHE/_${md5}_${napi}.sub"
-  local subftmp="$CACHE/_${md5}_${napi}.sub.tmp"
-
-  # KOPIA TYMCZASOWA ORYGINAŁU
-  cat "$subfile" > "$subftmp" # return
 
   # DETEKCJA KONWERTOWANIA
   local subcp_conv_from=""
@@ -1118,7 +1121,7 @@ subcp_convert() {
         --exclude elf \
         --exclude soft \
         --exclude tar \
-        "${subftmp}")"
+        "${subfile}")"
 
   if [ "$?" = "0" ] && [ -n "$encodingtype" ]; then
     case "${encodingtype,,}" in
@@ -1133,15 +1136,22 @@ subcp_convert() {
   fi
 
   # PORÓWNYWANIE STRON KODOWYCH I ZAPIS
-  #-------------------------------------
-  # Schemat postępowania: sprawdź czy istnieje potrzeba konwertowania
-  #   nie) tylko catnij
-  #   tak) przekonwertuj do pliku i w razie błędu nadpisz catem
-  test "$subcp_conv_to" != "$subcp_conv_from" \
-    && "$BIN_iconv" -f "$subcp_conv_from" -t "$subcp_conv_to" > "$subfile" 2> /dev/null < "$subftmp" \
-    || cat > "$subfile" 2> /dev/null < "$subftmp"
+  if [ "$subcp_conv_to" != "$subcp_conv_from" ]; then
+    # KOPIA TYMCZASOWA ORYGINAŁU
+    local subftmp="$CACHE/_${md5}_${napi}.subcp.tmp"
+    install -p -T "$subfile" "$subftmp" &> /dev/null
 
-  unlink "$subftmp"
+    # KONWERTOWANIE
+    if "$BIN_iconv" \
+      -f "$subcp_conv_from" \
+      -t "$subcp_conv_to" > "$subftmp" 2> /dev/null < "$subfile"
+    then
+      install -p -T "$subftmp" "$subfile" &> /dev/null
+    fi
+
+    # USUWANIE KOPII ZAPASOWEJ
+    unlink "$subftmp"
+  fi
 
   return 0
 }
@@ -1174,12 +1184,14 @@ sub_install() {
     to="$path.$c$pref.$subext"
   fi
 
-  cat "$from" > "$to"
-
-  # GDY PLIK JEST PUSTY
-  if [ ! -s "$to" ]; then
-    unlink "$to"
-    return 3
+  # INSTALACJA PLIKU (I GDY PLIK JEST PUSTY)
+  if ! install -p -D -T "$from" "$to" &> /dev/null; then
+    if [ -f "$to" ]; then
+      unlink "$to"
+      return 3
+    else
+      return 2
+    fi
   fi
 
   return 0
@@ -1224,7 +1236,7 @@ validate_auth() {
     local url="http://www.napiprojekt.pl/users_check.php?nick=$napi_nick&pswd=$napi_pass"
 
     if downloader "$url" "$CACHE/auth_status.txt"; then
-      auth_status="$(cat "$CACHE/auth_status.txt")"
+      read auth_status < "$CACHE/auth_status.txt"
       test "$auth_status" = "ok" && return 0
     fi
   fi
