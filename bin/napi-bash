@@ -6,6 +6,7 @@ NB_CONFIG="${NB_CONFIG:-"$NB_CONFIGDIR/config"}"
 
 auth_login=nie
 
+declare -a files hashes
 declare -A subfmt_ext
 subfmt_ext[fab]=txt
 subfmt_ext[microdvd]=sub
@@ -23,6 +24,8 @@ subext_autodetect=nie
 subext_prefix=""
 suboverwrite=nie
 subskipifexist=nie
+subretry_restore=nie
+subretry_store=nie
 colors=tak
 videoext_for=dir
 videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
@@ -34,6 +37,7 @@ msg_status[2]="%1Brak uprawnień do zapisu w folderze z plikiem: %f"
 msg_status[3]="%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f"
 msg_status[100]="%1Niepowiodła sie detekcja formatu napisów dla: %f"
 msg_status[101]="%1Niepowiodło się konwertowanie formatu napisów dla: %f"
+msg_status[102]="%1Niepowiodło się konwertowanie strony kodowej napisów dla: %f"
 msg_status[200]="%1Zdalny serwer zwrócił: Przerwa techniczna..."
 msg_status[254]="%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego.."
 msg_status[255]="%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?"
@@ -238,6 +242,10 @@ Opcje:
       Loguj się podanym wcześniej nickiem i hasłem.
       (ustawione: $auth_login)
 
+  -r=<bool>, --subretry-restore=<bool> [szkic/koncepcja]
+      Wznawia pobierania wcześniej zakończone niepowodzeniem,
+      bez ponownego generowania sum kontrolnych. (ustawione: $subretry_restore)
+
   --debug=<plik>
       Tryb debugowy
 
@@ -308,6 +316,8 @@ ARGV__getopts() {
         ARGV__bool "$opt"; colors="$bool_ret";;
       -X=*|--subext-autodetect=*|--subext-autodetect|--no-subext-autodetect)
         ARGV__bool "$opt"; subext_autodetect="$bool_ret";;
+      -r=*|--subretry-restore=*|--subretry-restore|--no-subretry-restore)
+        ARGV__bool "$opt"; subretry_restore="$bool_ret";;
       -F=*|--subfmt-conv=*) subfmt_conv="${opt#*=}" ;;
       -E=*|--subeol-conv=*) subeol_conv="${opt#*=}";;
       -C=*|--subcp-conv=*) subcp_conv="${opt#*=}" ;;
@@ -407,16 +417,20 @@ test_videoext() {
 }
 
 generate_files() {
-  local i
+  local i realpath
 
   # Pliki/katalogi..
   for i in "${@}"; do
+    realpath="$(realpath "$i")"
     if [ -d "$i" ]; then
-      generate_files__dir_recursively "$i"
+      generate_files__dir_recursively "$realpath"
     else
-      generate_files__file "$i"
+      generate_files__file "$realpath"
     fi
   done
+
+  # Dodawanie zawartości katalogu subretry o posiada zawartość
+  subretry_restore
 
   test "${#files[@]}" != "0"
 
@@ -439,17 +453,17 @@ generate_files__file() {
     test_videoext "$1" || return 0
   fi
 
-  test_filesize "$1" || return 0
+  test_filesize "$1" || return 1
 
   if enabled "$subskipifexist"; then
     local pref="${subext_prefix:+"."}$subext_prefix"
     if enabled "$subext_autodetect"; then
       # TODO "ułądnić"; Pomjać z opcją overwrite?
       for i in "${!subfmt_ext[@]}"; do
-        test -f "${1%.*}$pref.${subfmt_ext[$i]}" && return 0
+        test -f "${1%.*}$pref.${subfmt_ext[$i]}" && return 1
       done
     fi
-    test -f "${1%.*}$pref.$subext" && return 0
+    test -f "${1%.*}$pref.$subext" && return 1
   fi
 
   files+=("$1")
@@ -848,6 +862,8 @@ napi_poll() {
       # Instalowanie napisów
       subext="$ext" sub_install "${childARG[@]}"
       childARG[0]=$?
+    elif [ "${childARG[0]}" -lt "100" ]; then
+      subretry_store "${childARG[@]}"
     fi
 
     napi_msg "${childARG[1]}" "${childARG[0]}"
@@ -855,6 +871,39 @@ napi_poll() {
 }
 
 
+#-------------------------------------------------------------------------------
+# Wznawianie pobierania
+#-------------------------------------------------------------------------------
+subretry_store() {
+  enabled "$subretry_store" || return 0
+  local file="${files[$2]}" md5sum="$3" napisum="$4"
+  test -d "$CACHEDIR/subretry/" || mkdir -p "$CACHEDIR/subretry/"
+  echo "$file" > "$CACHEDIR/subretry/${md5sum}_${napisum}"
+}
+
+subretry_restore() {
+  enabled "$subretry_restore" || return 0
+  test -d "$CACHEDIR/subretry/" || return 1
+
+  local file sums i
+  local -i c="${#files[@]}"
+
+  for i in "$CACHEDIR/subretry/"*; do
+    read file < "$i"
+    if ! [ -f "$file" ]; then
+      unlink "$i"
+      continue
+    fi
+    sums="${i##*/}"
+    sums="${sums//_/ }"
+    if [ -n "$sums" ]; then
+      files[$c]="$file"
+      hashes[$c]="$sums"
+      c+=1
+    fi
+  done
+  #RETURNVAR: @files[c,..] @hashes[c,..]
+}
 
 #-------------------------------------------------------------------------------
 #  Pobieranie napisów
@@ -1076,7 +1125,7 @@ subfmt_convert() {
     && lasting_time_opts="--lasting-time $subfmt_lasting_time"
 
   # Konwertowanie
-  output="$(LANG=C "$BIN_subotage" $fps_opts$fps_ret $lasting_time_opts \
+  output="$(LANG=C "$BIN_subotage" $fps_opts $fps_ret $lasting_time_opts \
     -if "${ifmt%% *}" \
     -i "$subfile" \
     -o "$subftmp" \
@@ -1088,7 +1137,11 @@ subfmt_convert() {
       return 101
     fi
   else
-    install -p -T "$subftmp" "$subfile" &> /dev/null
+    cp \
+      --remove-destination \
+      --no-target-directory \
+      --dereference \
+      "$subftmp" "$subfile" &> /dev/null && unlink "$subftmp" || return 101
   fi
 
   test -f "$subftmp" && unlink "$subftmp"
@@ -1137,20 +1190,32 @@ subcp_convert() {
 
   # PORÓWNYWANIE STRON KODOWYCH I ZAPIS
   if [ "$subcp_conv_to" != "$subcp_conv_from" ]; then
-    # KOPIA TYMCZASOWA ORYGINAŁU
+    # Tworzenie kopii zapasowa oryginału
     local subftmp="$CACHE/_${md5}_${napi}.subcp.tmp"
-    install -p -T "$subfile" "$subftmp" &> /dev/null
-
-    # KONWERTOWANIE
-    if "$BIN_iconv" \
-      -f "$subcp_conv_from" \
-      -t "$subcp_conv_to" > "$subftmp" 2> /dev/null < "$subfile"
+    if ! cp \
+        --remove-destination \
+        --no-target-directory \
+        --dereference \
+        "$subfile" "$subftmp" &> /dev/null
     then
-      install -p -T "$subftmp" "$subfile" &> /dev/null
+      test -f "$subftmp" && unlink "$subftmp"
+      return 102
     fi
 
-    # USUWANIE KOPII ZAPASOWEJ
+    # Konwertowanie
+    "$BIN_iconv" \
+      -f "$subcp_conv_from" \
+      -t "$subcp_conv_to" > "$subftmp" 2> /dev/null < "$subfile" \
+    && cp \
+      --remove-destination \
+      --no-target-directory \
+      --dereference \
+      "$subftmp" "$subfile" &> /dev/null
+
+    # SPrzątanie
+    local ret=$?
     unlink "$subftmp"
+    test "$ret" = "0" || return 102
   fi
 
   return 0
@@ -1185,7 +1250,12 @@ sub_install() {
   fi
 
   # INSTALACJA PLIKU (I GDY PLIK JEST PUSTY)
-  if ! install -p -D -T "$from" "$to" &> /dev/null; then
+  if ! cp \
+    --preserve=timestamps \
+    --remove-destination \
+    --no-target-directory \
+    --dereference \
+    "$from" "$to" &> /dev/null; then
     if [ -f "$to" ]; then
       unlink "$to"
       return 3
