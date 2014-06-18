@@ -1058,7 +1058,7 @@ subfmt_convert__fps() {
   fps_ret=
   test "${#BIN_subotage__fps_f[@]}" = "0" && return 1
 
-  local fid="$1" subotage_fps="$2" LANG=C
+  local fid="$1" LANG=C
   local i b f fps_sub
 
   for ((i=0; i <= ${#BIN_subotage__fps_f[@]}; i++)); do
@@ -1071,9 +1071,74 @@ subfmt_convert__fps() {
       && return 0
   done
 
-  test "${subotage_fps//[0-9]/}" = "." \
-    && printf -v fps_ret "%.3f" "$subotage_fps"
+  return 1
   #RETURNVAR: $fps_ret
+}
+
+subfmt_convert__fmt_detect() {
+  local file="$1" line
+  local -i c=0 max_lines=40
+
+  fmt_detect_ret=
+
+  # szybsze od subotage.sh o ok 10 do 300 razy... Wykrywa te same formaty.
+  while read line; do
+    c+=1; test "$c" -gt "$max_lines" && break
+
+    case "${line:0:1}" in
+      "[")
+        if [[ "$line" =~ ^'['[0-9]+']['[0-9]*']' ]]; then
+          fmt_detect_ret='mpl2'
+          break
+        fi
+        ;;
+      "{")
+        if [[ "$line" =~ ^'{'[0-9]+'}{'[0-9]*'}' ]]; then
+          fmt_detect_ret='microdvd'
+          break
+        fi
+        ;;
+      [0-9])
+        case "$line" in
+          [0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]' --> '[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]*)
+            fmt_detect_ret='subrip'
+            break
+            ;;
+          [0-9][0-9]:[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9]:[0-9][0-9]:[0-9][0-9]:[0-9][0-9]*)
+            fmt_detect_ret='subview'
+            break
+            ;;
+          [0-9][0-9]:[0-9][0-9]:[0-9][0-9]:*)
+            fmt_detect_ret='tmplayer'
+            break
+            ;;
+          *)
+            if [[ "$line" =~ ^[0-9]+[[:space:]]:[[:space:]][0-9]+:[0-9]+:[0-9]+:[0-9]+[[:space:]]+[0-9]+:[0-9]+:[0-9]+:[0-9]+ ]]; then
+              fmt_detect_ret='fab'
+              break
+            fi
+        esac
+    esac
+  done < "$file"
+
+  # fallback - tak na wszelki wypadek, nigdy nic nie wiadomo...
+  if [ -z "$fmt_detect_ret" ]; then
+    enabled "$DEBUG" && echo "fixme: autodetekcja fallback..."
+
+    local ifmt="$(LANG=C "$BIN_subotage" -gi "$file" 2>&1)"
+    if [ "$ifmt" != "not detected" ]; then
+      ifmt="${ifmt%% *}"
+      case "$ifmt" in
+        microdvd|mpl2|subrip|tmplayer|subviewer|fab) fmt_detect_ret="$ifmt";;
+        *) return 1;;
+      esac
+    else
+      return 1
+    fi
+  fi
+
+  return 0
+  #RETURNVAR: $fmt_detect_ret
 }
 
 subfmt_convert() {
@@ -1086,34 +1151,25 @@ subfmt_convert() {
   local fid="$1" md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
   local subftmp="$CACHE/_${md5}_${napi}.subfmt.tmp"
-  local output ifmt i fps_ret fps_opts=""
+  local output fmt_detect_ret i fps_ret fps_opts
 
   # Detekcja (potrzebne dla obu: subext_autodetect i subfmt_conv)
-  ifmt="$(LANG=C "$BIN_subotage" -gi "$subfile" 2>&1)" || return 100
-
-  # Nadpisać subext danymi z detekcji?
-  if enabled "$subext_autodetect"; then
-    if [ "$ifmt" != "not detected" -a -n "${subfmt_ext[${ifmt%% *}]}" ]; then
-      ext="${subfmt_ext[${ifmt%% *}]}"
-    else
-      return 100
-    fi
-  fi
+  subfmt_convert__fmt_detect "$subfile" || return 100
+  enabled "$subext_autodetect" && ext="${subfmt_ext[$fmt_detect_ret]}"
 
   # Zatrzymaj tutaj jeśli nie ustawiono subfmt_conv
   test -z "$subfmt_conv" && return 0
 
   # Konwersja nie jest potrzebna, plik już jest w tym formacie
-  test "$subfmt_conv" = "${ifmt%% *}" && return 0
+  test "$subfmt_conv" = "$fmt_detect_ret" && return 0
 
   # Jedyny obsługiwany format, który wymaga FPS pliku filmowego to microdvd
   test "$subfmt_conv" = "microdvd" && fps_opts="-fo"
-  test "${ifmt%% *}"  = "microdvd" && fps_opts="-fi"
+  test "$fmt_detect_ret"  = "microdvd" && fps_opts="-fi"
 
-  # Wczytywanie FPS dla microdvd
+  # Wczytywanie FPS dla konwersji z/do microdvd
   if [ -n "$fps_opts" ]; then
-    set -- $ifmt
-    if ! subfmt_convert__fps "$fid" "$3"; then
+    if ! subfmt_convert__fps "$fid"; then
       return 101
     fi
   fi
