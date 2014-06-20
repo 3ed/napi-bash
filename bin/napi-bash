@@ -4,16 +4,17 @@ NB_CONFIGDIR="${NB_CONFIGDIR:-"${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash"}
 NB_CACHEDIR="${NB_CACHEDIR:-"${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/"}"
 NB_CONFIG="${NB_CONFIG:-"$NB_CONFIGDIR/config"}"
 
-auth_login=nie
-
 declare -a files hashes
 declare -A subfmt_ext
+
 subfmt_ext[fab]=txt
 subfmt_ext[microdvd]=sub
 subfmt_ext[mpl2]=txt
 subfmt_ext[subviewer]=sub
 subfmt_ext[subrip]=srt
 subfmt_ext[tmplayer]=txt
+
+auth_login=nie
 
 subcp_conv=""
 subfmt_conv=""
@@ -553,28 +554,28 @@ fill_fields() {
     ch="${msg:c:1}"
     if [ "$ch" = "%" ]; then
       let c++
-      _ini_fields_$ini "$fmt" "${msg:c:1}" "$@"
+      fill_fields__ini_$ini "$fmt" "${msg:c:1}" "$@"
     else
       fill_fields_ret+="$ch"
     fi
   done
 
-  _fmt_fields_$fmt "R"
+  fill_fields__fmt_$fmt "R"
 
   #RETURNVAR: $fill_fields_ret
 }
 
 # ini fields (put the information)
-_ini_fields_msg() {
+fill_fields__ini_msg() {
   case "$2" in
     f) fill_fields_ret+="${files[$3]##*/}";;
     d) fill_fields_ret+="$3";;
     e) fill_fields_ret+="$4";;
     %) fill_fields_ret+="%";;
-    *) _fmt_fields_$1 "$2"
+    *) fill_fields__fmt_$1 "$2"
   esac
 }
-_ini_fields_raport() {
+fill_fields__ini_raport() {
   local -i d=0 n=0 a=0
 
   for ((a=0; $a < "${#files_stat[@]}"; a++)); do
@@ -586,12 +587,12 @@ _ini_fields_raport() {
     n) fill_fields_ret+="$n";;
     a) fill_fields_ret+="$a";;
     %) fill_fields_ret+="%";;
-    *) _fmt_fields_$1 "$2"
+    *) fill_fields__fmt_$1 "$2"
   esac
 }
 
 # format fields (formating output)
-_fmt_fields_cli_esc() {
+fill_fields__fmt_cli_esc() {
   enabled "$colors" || return
 
   case "$1" in
@@ -609,7 +610,7 @@ _fmt_fields_cli_esc() {
 
   fill_fields_ret+="\e[0${NB_FIELDS_SUB[1]}${NB_FIELDS_SUB[2]}${NB_FIELDS_SUB[3]}${NB_FIELDS_SUB[0]}m"
 }
-_fmt_fields_gui_xml() {
+fill_fields__fmt_gui_xml() {
   local c
   case "$1" in
     b|i|u)
@@ -1098,22 +1099,22 @@ subfmt_convert__fmt_detect() {
           break
         fi
         ;;
-      [0-9])
+      0)
         case "$line" in
-          [0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]' --> '[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]*)
+          00:[0-5][0-9]:[0-5][0-9],[0-9][0-9][0-9]' --> '00:[0-5][0-9]:[0-5][0-9],[0-9][0-9][0-9]*)
             fmt_detect_ret='subrip'
             break
             ;;
-          [0-9][0-9]:[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9]:[0-9][0-9]:[0-9][0-9]:[0-9][0-9]*)
+          00:[0-5][0-9]:[0-5][0-9]:[0-9][0-9],00:[0-5][0-9]:[0-5][0-9]:[0-9][0-9]*)
             fmt_detect_ret='subview'
             break
             ;;
-          [0-9][0-9]:[0-9][0-9]:[0-9][0-9]:*)
+          00:[0-5][0-9]:[0-5][0-9]:*)
             fmt_detect_ret='tmplayer'
             break
             ;;
           *)
-            if [[ "$line" =~ ^[0-9]+[[:space:]]:[[:space:]][0-9]+:[0-9]+:[0-9]+:[0-9]+[[:space:]]+[0-9]+:[0-9]+:[0-9]+:[0-9]+ ]]; then
+            if [[ "$line" =~ ^[0-9]+[[:space:]]:[[:space:]]00:[0-5][0-9]:[0-5][0-9]:[0-9]{2}[[:space:]]+00:[0-5][0-9]:[0-5][0-9]:[0-9]{2} ]]; then
               fmt_detect_ret='fab'
               break
             fi
