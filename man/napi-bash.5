@@ -11,7 +11,7 @@ Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanym
 .SH OPCJE KONFIGURACYJNE
 .SS
 .nf
-suboverwrite, skipifexist, colors, subext, subext_autodetect, subext-prefix, subfmt_conv, subcp_conv, subeol_conv
+suboverwrite, skipifexist, colors, subext, subext_autodetect, subext-prefix, subfmt_conv, subcp_conv, subeol_conv, auth_nick, auth_pass, auth_login
 .fi
 .TS
 tab(#);
@@ -23,7 +23,7 @@ suboverwrite=*#-o=xyz, --suboverwrite=*
 _
 skipifexist=*#-s=*, --skipifexist=*
 _
-colors=*#-c=*|--colors=*
+colors=*#-c=*, --colors=*
 _
 subext=*#-x=*, --subext=*
 _
@@ -37,19 +37,15 @@ subcp_conv=*#-C=*, --subcp-conv=*
 _
 subeol_conv=*#-E=*, --subeol-conv=*
 _
+auth_nick=*#-n=*, --nick=*
+_
+auth_pass=*#-p=*, --pass=*
+_
+auth_login=*#-L=*, --login=*
+_
 .TE
 Patrz:
 .BR napi-bash (1)
-.SS auth_nick=login
-Twój login do napiprojektu. Domyślnie puste czyli jako anonim.
-.br
-.B Uwaga:
-transmisja czystym tekstem bez zapamiętywania sesji...
-.SS auth_pass=haslo
-Twoje hasło do napiprojektu. Patrz:
-.B auth_nick
-.SS auth_login=tak/nie
-Określa czy użytkownik ma się automatycznie zalogowywać. Gdy wybrano „nie”, można manualnie użyć argumentu programu: „--login=tak”
 .SS subfmt_ext[Format]="Rozszerzenie"
 Opcja umożliwia zmianę domyślnego rozszerzenia formatu. Obsługiwanie formaty i ich rozszerzenia:
 .TS
@@ -79,8 +75,31 @@ Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter. Moż
 .nf
 videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
 .fi
-.SS videoext_dironly=tak
-Porównuj końcówki nazw plików tylko dla tych które znajdują się w podanym przez użytkownika folderze.
+.SS videoext_match="Cel"
+Porównuj końcówki nazw plików tylko dla określonego celu.
+.PP
+Cel:
+.RS 4
+\fBalways\fR
+.RS 4
+Porównuj zawsze (domyślnie w poprzedniej wersji)
+.RE
+.PP
+\fBfile\fR
+.RS 4
+Tylko dla plików
+.RE
+.PP
+\fBdir\fR
+.RS 4
+Tylko dla katalogów, przy wyszukiwaniu w nich. \fB[domyślnie]\fR
+.RE
+.PP
+\fBnever\fR
+.RS 4
+Nigdy, wszyskie są ok...
+.RE
+.RE
 .SS DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
 Agent pobierania plików (%o wyjściowy; %u adres url)
 .SS msg_status[ID]="Treść"
@@ -123,12 +142,6 @@ Format wyjścia dla notyfikacji "Raport". Notyfikacja pojawia się tylko raz tu�
 Wyświetlaj raport końcowy (fałsz/prawda) #0/1
 .SS gui_int_warn=1
 Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... (fałsz/prawda) #0/1
-.SH FUNKCJE
-Można wykonywać wszyskie polecenia powłoki (nie polecam nadpisywania) plus te wbudowane:
-.SS enabled "$zmienna"
-Sprawdza czy zawartość "$zmienna" jest prawdą czy fałszem.
-.SS multieq "$zmienna" "1" "2" .. "n"
-Sprawdza czy "$zmienna" jest identyczna z którąś kolejną opcją.
 .SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
 .B Modyfikujesz na własną odpowiedzialność!
 .SS subfmt_lasting_time="3000"
@@ -182,25 +195,20 @@ Za pomocą tej funkcji użytkownik może podmienić treść raportu na np. bardz
 .br
 %9 domyślny kolory czcionki.
 .SH PRZYKŁAD
+# Format subrip, kodowanie windows-cp1250, koniec linii dos/windows:
+.br
 subfmt_conv=subrip
 .br
-subcp_conv=WINDOWS
+subcp_conv=win
 .br
 subeol_conv=dos
 .br
+# Prefix:
+.br
 subext_prefix=pl
 .br
-videoext_for=dir
-.br
-if multieq "$videoext_for" "file" "all"; then
-.br
-  videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt}{,.part})
-.br
-elif [ "$videoext_for" = "dir" ]; then
-.br
-  videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
-.br
-fi
+# Nie porównuj rozszerzeń dla plików wskazanych bezpośrednio
+videoext_match=dir
 .SH BŁĘDY
 Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projektu.
 .SH ZOBACZ TEŻ

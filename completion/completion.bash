@@ -11,7 +11,11 @@ _napi-bash() {
   _init_completion -n = || return
 
   case $cur in
-    --colors=*|--skipifexist=*|--subext-autodetect=*|--suboverwrite=*)
+    --depth=*|--nick=*|--pass=*|--ge=*|--le=*|--subext-prefix=*)
+      cur=${cur#*=}
+      return 0
+      ;;
+    --colors=*|--skipifexist=*|--subext-autodetect=*|--suboverwrite=*|--login=*)
       cur=${cur#*=}
       COMPREPLY=( $( compgen -W 'tak nie' -- "$cur" ) )
       return 0
@@ -19,10 +23,6 @@ _napi-bash() {
     --subext=*)
       cur=${cur#*=}
       COMPREPLY=( $( compgen -W 'sub txt srt' -- "$cur" ) )
-      return 0
-      ;;
-    --subext-prefix=*)
-      cur=${cur#*=}
       return 0
       ;;
     --subfmt-conv=*)
@@ -38,11 +38,6 @@ _napi-bash() {
     --subeol-conv=*)
       cur=${cur#*=}
       COMPREPLY=( $( compgen -W 'dos unix' -- "$cur" ) )
-      return 0
-      ;;
-    --depth=*)
-      cur=${cur#*=}
-      COMPREPLY=( $( compgen -W '0- 1- 2- 3- 4- 5- 6- 7- 8- 9-' -- "$cur" ) )
       return 0
       ;;
     --config=*)

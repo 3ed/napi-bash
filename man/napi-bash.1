@@ -1,5 +1,5 @@
 .\" Manpage for napi-bash.
-.TH NAPI-BASH 1 "2014-05-15" "0.41" "napi-bash"
+.TH NAPI-BASH 1 "2014-06-20" "0.50" "napi-bash"
 .SH NAZWA
 napi-bash - pobieranie polskich napisów do filmów..
 .SH SKŁADNIA
@@ -53,8 +53,20 @@ Głębia przeszukiwania rekursywnego (domyślnie: ""). Przykładowe wartości <o
 1-2   ./pliki      ...   ./*/pliki
 .br
 -4    ./pliki      ...   ./*/*/*/pliki
+.SS -g=<liczba>, --ge=<liczba>
+Tylko pliki większe bądź równe podanej ilości MiB. Dla opcji --ge=200 wynikami wyszukiwania będą pliki większe bądź równe 200MiB.
+.SS -l=<liczba>, --le=<liczba>
+Tylko pliki mniejsze bądź równe podanej ilości MiB.
+.SS -n=<tekst>, --nick=<tekst>
+Twój login do napiprojektu. Pozostaw puste dla konta anonimowego.
+.SS -p=<tekst>, --pass=<tesk>
+Twoje hasło do napiprojektu. Pozostaw puste dla konta anonimowego.
+.SS -L=<bool>, --login=<bool>
+Loguj się podanym wcześniej nickiem i hasłem.
 .SS debug=<plik>
 Tryb debugowy
+--config=<plik>
+Alternatywny plik konfiguracyjny.
 .SS -h, --help, --usage
 Wyświetl pomoc
 .SH TYPY ARGUMENTÓW

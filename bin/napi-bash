@@ -21,14 +21,14 @@ subfmt_conv=""
 subeol_conv=""
 
 subext="txt"
-subext_autodetect=nie
+subext_autodetect=tak
 subext_prefix=""
 suboverwrite=nie
 subskipifexist=nie
 subretry_restore=nie
 subretry_store=nie
 colors=tak
-videoext_for=dir
+videoext_match=dir
 videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
 DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
 msg_raport="Łącznie pobranych napisów: %b%d/%a%B"
@@ -73,18 +73,6 @@ enabled() {
   case "${1,,}" in
     0|-|f*|n*|wy*|of*|"") false
   esac
-}
-
-multieq() {
-  local i eq="$1"; shift
-
-  until [ -z "$1" ]; do
-    test "$eq" = "$1" \
-      && return 0
-    shift
-  done
-
-  return 1
 }
 
 #-------------------------------------------------------------------------------
@@ -242,10 +230,11 @@ Opcje:
   -L=<bool>, --login=<bool>
       Loguj się podanym wcześniej nickiem i hasłem.
       (ustawione: $auth_login)
-
-  -r=<bool>, --subretry-restore=<bool> [szkic/koncepcja]
-      Wznawia pobierania wcześniej zakończone niepowodzeniem,
-      bez ponownego generowania sum kontrolnych. (ustawione: $subretry_restore)
+EOF
+#  -r=<bool>, --subretry-restore=<bool> [szkic/koncepcja]
+#      Wznawia pobierania wcześniej zakończone niepowodzeniem,
+#      bez ponownego generowania sum kontrolnych. (ustawione: $subretry_restore)
+cat <<EOF
 
   --debug=<plik>
       Tryb debugowy
@@ -317,8 +306,8 @@ ARGV__getopts() {
         ARGV__bool "$opt"; colors="$bool_ret";;
       -X=*|--subext-autodetect=*|--subext-autodetect|--no-subext-autodetect)
         ARGV__bool "$opt"; subext_autodetect="$bool_ret";;
-      -r=*|--subretry-restore=*|--subretry-restore|--no-subretry-restore)
-        ARGV__bool "$opt"; subretry_restore="$bool_ret";;
+#      -r=*|--subretry-restore=*|--subretry-restore|--no-subretry-restore)
+#        ARGV__bool "$opt"; subretry_restore="$bool_ret";;
       -F=*|--subfmt-conv=*) subfmt_conv="${opt#*=}" ;;
       -E=*|--subeol-conv=*) subeol_conv="${opt#*=}";;
       -C=*|--subcp-conv=*) subcp_conv="${opt#*=}" ;;
@@ -348,7 +337,7 @@ ARGV__bad_arg() {
   case "$1" in
     l) error "Niepoprawna opcja: '$2'";;
     r) error "Nieprawidłowy argument opcji: '$2'";;
-    *) true
+    *) false
   esac
 }
 
@@ -450,9 +439,11 @@ generate_files__dir_recursively() {
 generate_files__file() {
   test -f "$1" -a -r "$1" || return 1
 
-  if multieq "$videoext_for" "${NB_generate_files_FOR:-"file"}" "all"; then
-    test_videoext "$1" || return 0
-  fi
+  local NB_generate_files_FOR="${NB_generate_files_FOR:-file}"
+
+  case "${videoext_match,,}" in
+    a*|${NB_generate_files_FOR:0:1}*) test_videoext "$1" || return 0;;
+  esac
 
   test_filesize "$1" || return 1
 
@@ -1418,7 +1409,7 @@ setup_bin_iconv() {
 }
 
 setup_bin_subotage() {
-  test -n "$subfmt_conv" || enabled "$subext_autodetect" || return 0
+  test -n "$subfmt_conv" || return 0
 
   case "${subfmt_conv,,}" in
     f*)    subfmt_conv=fab;;
@@ -1427,7 +1418,6 @@ setup_bin_subotage() {
     subv*) subfmt_conv=subviewer;;
     subr*) subfmt_conv=subrip;;
     t*)    subfmt_conv=tmplayer;;
-    "")    subfmt_conv="";;
     *)
       subfmt_conv=""
       warn "Nieobsługiwana format napisów dla subfmt_conv, pomijam..."
@@ -1439,7 +1429,6 @@ setup_bin_subotage() {
     test -z "$subfmt_conv" || setup_bin_subotage__fps
   else
     subfmt_conv=""
-    subext_autodetect=0
     warn "Aby móc korzystać z opcji subfmt_conv, zainstaluj subotage..."
   fi
 }
