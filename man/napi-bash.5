@@ -1,13 +1,18 @@
 .\" Manpage for napi-bash.conf.
-.TH NAPI-BASH 5 "2014-05-15" "0.41" "Konfiguracja napi-bash"
+.TH NAPI-BASH 5 "2014-06-22" "0.50" "Konfiguracja napi-bash"
 .SH NAZWA
 Konfiguracja programu napi-bash..
 .SH LOKALIZACJA
+.PP
+.nf
 ${XDG_CONFIG_HOME}/napi-bash/config
-.br
 ~/.config/napi-bash/config
+.fi
+.fi
 .SH OPIS
+.PP
 Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanymi w nim domyślne opcje i niektóre funkcje..
+.fi
 .SH OPCJE KONFIGURACYJNE
 .SS
 .nf
@@ -17,9 +22,9 @@ suboverwrite, skipifexist, colors, subext, subext_autodetect, subext-prefix, sub
 tab(#);
 |l|l|.
 _
-Opcja konfiguracji#Argument polecenia
-_
-suboverwrite=*#-o=xyz, --suboverwrite=*
+\fBOpcja konfiguracji\fR:#\fBArgument polecenia\fR:
+=
+suboverwrite=*#-o=*, --suboverwrite=*
 _
 skipifexist=*#-s=*, --skipifexist=*
 _
@@ -47,38 +52,47 @@ _
 Patrz:
 .BR napi-bash (1)
 .SS subfmt_ext[Format]="Rozszerzenie"
+.PP
 Opcja umożliwia zmianę domyślnego rozszerzenia formatu. Obsługiwanie formaty i ich rozszerzenia:
-.TS
-tab(#);
-|l|l|.
-_
-Format:#Rozszerzenie:
-_
-fab#txt
-_
-microdvd#sub
-_
-mpl2#txt
-_
-subviewer#sub
-_
-subrip#srt
-_
-tmplayer#txt
-_
-.TE
+.fi
+.PP
+\fBFormat\fR = Rozszerzenie:
+.RS 4
+.nf
+\fBfab\fR       = txt
+\fBmicrodvd\fR  = sub
+\fBmpl2\fR      = txt
+\fBsubviewer\fR = sub
+\fBsubrip\fR    = srt
+\fBtmplayer\fR  = txt
+.fi
+.RE
+.fi
+.SS subfmt_lasting_time="3000"
+.PP
+Minimalny czas wyświetlania linijki w ms dla napisów konwertowanych z formatu w którym nie ma określonego czasu wygasania. (patrz, polecenie: subotage.sh --lasting-time)
+.fi
 .SS
 .nf
 videoext=(.3gp .avi .asf .divx .m4v .mkv .mov .mp4 .mpe .mpeg .mpg .ogg .ogv .rmvb .wmv .qt)
 .fi
-Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter. Można stosować „Brace expansion”, np:
+.PP
+Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter.
+.fi
+.PP
+Można stosować „Brace expansion”, np:
 .nf
+.RS 4
 videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
+.RE
+.fi
 .fi
 .SS videoext_match="Cel"
-Porównuj końcówki nazw plików tylko dla określonego celu.
 .PP
-Cel:
+Porównuj końcówki nazw plików tylko dla określonego celu.
+.fi
+.PP
+\fBCel\fR:
 .RS 4
 \fBalways\fR
 .RS 4
@@ -100,134 +114,140 @@ Tylko dla katalogów, przy wyszukiwaniu w nich. \fB[domyślnie]\fR
 Nigdy, wszyskie są ok...
 .RE
 .RE
+.fi
 .SS DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
-Agent pobierania plików (%o wyjściowy; %u adres url)
+Agent pobierania plików (\fB%o\fR wyjściowy; \fB%u\fR adres url)
 .SS msg_status[ID]="Treść"
-Format wyjścia dla notyfikacji "Status". Notyfikacja pojawia się za każdym razem gdy program zakończył operacje dla pojedyńczego pliku, chyba że wyłączono w `msg_{cli,gui}_disabled_array'. Zobacz też sekcje
-.B TAGI.
-Domyślne ustawienia:
-.TS
-tab(#);
-|l|l|.
-_
-ID:#Treść:
-_
-0#%2%bPobrano%R dla %i%f
-_
-1#%1%bBrak napisów%R dla %i%f
-_
-2#%1Brak uprawnień do zapisu w folderze z plikiem: %f
-_
-3#%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f
-_
-100#%1Niepowiodła sie detekcja formatu napisów dla: %f
-_
-101#%1Niepowiodło się konwertowanie formatu napisów dla: %f
-_
-254#%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego..
-_
-255#%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?
-_
-.TE
+.PP
+Format wyjścia dla notyfikacji "Status". Notyfikacja pojawia się za każdym razem gdy program zakończył operacje dla pojedyńczego pliku, chyba że wyłączono w \fBmsg_{cli,gui}_disabled_array\fR. Zobacz też sekcje \fBTAGI\fR. Domyślne ustawienia:
+.fi
+.PP
+\fBID\fR = Treść:
+.RS 4
+.nf
+\fB0\fR   = %2%bPobrano%R dla %i%f
+\fB1\fR   = %1%bBrak napisów%R dla %i%f
+\fB2\fR   = %1Brak uprawnień do zapisu w folderze z plikiem: %f
+\fB3\fR   = %1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f
+\fB100\fR = %1Niepowiodła sie detekcja formatu napisów dla: %f
+\fB101\fR = %1Niepowiodło się konwertowanie formatu napisów dla: %f
+\fB254\fR = %1DLAGENT nie zawiera tagu %o dla pliku wyjściowego..
+\fB255\fR = %1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?
+.fi
+.RE
+.fi
 .SS msg_cli_disabled_array=()
 .SS msg_gui_disabled_array=(0 1)
-Wyłącz info dla następujących treści (patrz na msg_status) #tablica id
-.br
-Uwaga: 0 i 1 mogą być męczące w Gnome3 (domyślnie wyłączone)
+.PP
+Wyłącz info dla następujących treści (patrz na: \fBmsg_status\fR) #tablica id
+.fi
+.PP
+\fBUwaga\fR: 0 i 1 mogą być męczące w Gnome3 (domyślnie wyłączone)
+.fi
 .SS msg_raport=""
-Format wyjścia dla notyfikacji "Raport". Notyfikacja pojawia się tylko raz tuż po wykonaniu wszystkich zadań podsumowując je, chyba że wyłączono w `raport_{cli,gui}_enabled'. Zobacz też sekcje
-.B TAGI.
+.PP
+Format wyjścia dla notyfikacji "Raport". Notyfikacja pojawia się tylko raz tuż po wykonaniu wszystkich zadań podsumowując je, chyba że wyłączono w \fBraport_{cli,gui}_enabled\fR. Zobacz też sekcje: \fBTAGI\fR.
+.fi
 .SS raport_cli_enabled=1
 .SS raport_gui_enabled=1
+.PP
 Wyświetlaj raport końcowy (fałsz/prawda) #0/1
+.fi
 .SS gui_int_warn=1
+.PP
 Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... (fałsz/prawda) #0/1
-.SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
-.B Modyfikujesz na własną odpowiedzialność!
-.SS subfmt_lasting_time="3000"
-Minimalny czas wyświetlania linijki w ms dla napisów konwertowanych z formatu w którym nie ma określonego czasu wygasania.
-.SS gui_msg_fmt="gui_xml"
-.SS cli_msg_fmt="cli_esc"
-.SS gui_raport_fmt="gui_xml"
-.SS cli_raport_fmt="cli_esc"
-Domyślne moduły parsowania tagów formatowania tekstu. użytkownik może stworzyć własne. Należy pamiętać że aby nie tworzyć konfliktów z modułami parsowania tagów informacji, powinno się używać tylko następujących tagów: %b, %i, %u, %B, %I, %U, %R, %[0-9]. Aby napisać inny format, stwórz funkcję _fmt_fields_nowy_format i nadpisz zmienną, np: gui_msg_fmt="nowy_format".
-.SS gui_msg() {}
-Jeżeli użytkownik chce podmienić libnotify na np. zenity, może to zrobić nadpisująć tą funkcję swoją własną. Pierwszy parametr to typ czyli [0-255] lub "raport". Drugi parametr to treść.
-.SS custom_raport_msg() {}
-Za pomocą tej funkcji użytkownik może podmienić treść raportu na np. bardziej treściwy niż jest to możliwe przy użyciu zmiennej `msg_raport'. Gdyby jednak twoja funkcja nie działała prawidłowo to po return większym niż jeden, tekst nie zostanie nadpisany. Kombinajca z gui_msg powinna dać interesujące możliwości. Podstawowe zmienne to $files (nazwy plików), $file_stat (ich status).
+.fi
 .SH TAGI
 .SS Tagi dla msg_raport:
-%d ilość pomyślnie pobranych napisów,
-.br
-%n ilość noepobranych napisów,
-.br
-%a ilość wszystkich razem.
+.PP
+.nf
+\fB%d\fR ilość pomyślnie pobranych napisów,
+\fB%n\fR ilość noepobranych napisów,
+\fB%a\fR ilość wszystkich razem.
+.fi
+.fi
 .SS Tagi dla msg_status:
-%d id pliku,
-.br
-%f nazwa plik,
-.br
-%e numer błędu.
+.PP
+.nf
+\fB%d\fR id pliku,
+\fB%f\fR nazwa plik,
+\fB%e\fR numer błędu.
+.fi
+.fi
 .SS Wspólne tagi:
-%b czcionka pogrubiona,
-.br
-%i czcionka pochylona,
-.br
-%u czcionka podkreślona,
-.br
-%0 kolor czarny,
-.br
-%1 kolor czerwony,
-.br
-%2 kolor zielony,
-.br
-%3 kolor żółty,
-.br
-%4 kolor niebieski,
-.br
-%5 kolor pomarańczowy,
-.br
-%6 kolor wyblakło-niebieski,
-.br
-%7 kolor biały,
-.br
-%8 domyślny kolory czcionki,
-.br
-%9 domyślny kolory czcionki.
+.PP
+.nf
+\fB%b\fR czcionka pogrubiona,
+\fB%i\fR czcionka pochylona,
+\fB%u\fR czcionka podkreślona,
+\fB%0\fR kolor czarny,
+\fB%1\fR kolor czerwony,
+\fB%2\fR kolor zielony,
+\fB%3\fR kolor żółty,
+\fB%4\fR kolor niebieski,
+\fB%5\fR kolor pomarańczowy,
+\fB%6\fR kolor wyblakło-niebieski,
+\fB%7\fR kolor biały,
+\fB%8\fR domyślny kolory czcionki,
+\fB%9\fR domyślny kolory czcionki.
+.fi
+.fi
+\".SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
+\".B Modyfikujesz na własną odpowiedzialność!
+\".SS gui_msg_fmt="gui_xml"
+\".SS cli_msg_fmt="cli_esc"
+\".SS gui_raport_fmt="gui_xml"
+\".SS cli_raport_fmt="cli_esc"
+\"Domyślne moduły parsowania tagów formatowania tekstu. użytkownik może stworzyć własne. Należy pamiętać że aby nie tworzyć konfliktów z modułami parsowania tagów informacji, powinno się używać tylko następujących tagów: %b, %i, %u, %B, %I, %U, %R, %[0-9]. Aby napisać inny format, stwórz funkcję fill_fields__fmt_nowy_format i nadpisz zmienną, np: gui_msg_fmt="nowy_format".
+\".SS gui_msg() {}  [przestarzałe]
+\"Jeżeli użytkownik chce podmienić libnotify na np. zenity, może to zrobić nadpisująć tą funkcję swoją własną. Pierwszy parametr to typ czyli [0-255] lub "raport". Drugi parametr to treść.
+\".SS custom_raport_msg() {}  [przestarzałe]
+\" Za pomocą tej funkcji użytkownik może podmienić treść raportu na np. bardziej treściwy niż jest to możliwe przy użyciu zmiennej `msg_raport'. Gdyby jednak twoja funkcja nie działała prawidłowo to po return większym niż 0, tekst nie zostanie nadpisany. Kombinajca z gui_msg powinna dać interesujące możliwości. Podstawowe zmienne to $files (nazwy plików), $file_stat (ich status).
 .SH PRZYKŁAD
+.nf
 # Format subrip, kodowanie windows-cp1250, koniec linii dos/windows:
-.br
 subfmt_conv=subrip
-.br
 subcp_conv=win
-.br
 subeol_conv=dos
-.br
+
 # Prefix:
-.br
 subext_prefix=pl
-.br
+
 # Nie porównuj rozszerzeń dla plików wskazanych bezpośrednio
 videoext_match=dir
+.fi
 .SH BŁĘDY
 Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projektu.
 .SH ZOBACZ TEŻ
 .BR napi-bash (1)
 .SH AUTORZY
-Krzysztof (3ED) AS  -- krzysztof1987  [na]  gmail  [kropka]  com
+.SS Autor:
 .PP
-Strona projektu: https://3ed.github.io/napi-bash
+.B Krzysztof (3ED) AS
+.RS 4
+.nf
+\fBEmail:\fR krzysztof1987  [na]  gmail  [kropka]  com
 .fi
-.PP
-.B Program został wykonany przy użyciu tych narzędzi:
-    bash      - 99.(9)% całego kodu
-    curl      - domyślny agent pobierania
-    dd        - wczytywanie określonej ilości bajtów pliku
-    md5sum    - sumy kontrolne md5
+.RE
 .fi
+.SS Strona projektu:
 .PP
-.B Narzędzia opcjonalne:
-    iconv     - zmiana kodowania czcionek
-    subotage  - konwertowanie formatu napisów
-    libnotify - wyświetlanie komunikatów na pulpicie
+https://3ed.github.io/napi-bash
+.fi
+.SS Program został wykonany przy użyciu tych narzędzi:
+.PP
+.nf
+bash      - 99.(9)% całego kodu
+curl      - domyślny agent pobierania
+dd        - wczytywanie określonej ilości bajtów pliku
+md5sum    - sumy kontrolne md5
+.fi
+.fi
+.SS Narzędzia opcjonalne:
+.PP
+.nf
+iconv     - zmiana kodowania czcionek
+subotage  - konwertowanie formatu napisów
+libnotify - wyświetlanie komunikatów na pulpicie
+.fi
 .fi

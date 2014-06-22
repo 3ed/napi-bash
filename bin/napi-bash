@@ -172,43 +172,43 @@ printfo() {
 #  Obsługa argumentów, wyszkiwanie i badanie plików..
 #-------------------------------------------------------------------------------
 usage() {
-  cat << EOF
-napi-bash wersja $NB_VERSION | 3ED <krzysztof1987@gmail.com>
+  printf '%s wersja %s | 3ED <krzysztof1987@gmail.com>\n\n' \
+    "napi-bash" "$NB_VERSION"
 
-Użycie:
+  printf 'Użycie:
   napi-bash [opcje] <plik/folder> [kolejne pliki/foldery]
   napi-bash <-h|--help>
 
 Opcje:
   -o=<bool>, --suboverwrite=<bool>, --(no-)suboverwrite
-      Nadpisuj pliki (ustawione: $suboverwrite)
+      Nadpisuj pliki (ustawione: %s)
 
   -s=<bool>, --skipifexist=<bool>, --(no-)skipifexist
-      Pomijaj pobrane (ustawione: $subskipifexist)
+      Pomijaj pobrane (ustawione: %s)
 
   -c=<bool>, --colors=<bool>, --(no-)colors
-      Używaj kolorów (ustawione: $colors)
+      Używaj kolorów (ustawione: %s)
 
   -x=<tekst>, --subext=<tekst>
-      Rozszerzenie pliku (ustawione: "$subext").
+      Rozszerzenie pliku (ustawione: "%s").
 
   -X=<bool>, --subext-autodetect=<bool>, --(no-)subext-autodetect
-      Przeprowadzić autodetekcji (ustawione: $subext_autodetect).
+      Przeprowadzić autodetekcji (ustawione: %s).
 
   -P=<tekst>, --subext-prefix=<tekst>
       Dodatkowy przedrostek przed rozszerzeniem pliku. Puste by
-      wyłączyć. (Ustawione: "$subext_prefix")
+      wyłączyć. (Ustawione: "%s")
 
   -F=<tekst>, --subfmt-conv=<tekst>
-      Format napisów. Puste by wyłączyć. (ustawione: "$subfmt_conv")
+      Format napisów. Puste by wyłączyć. (ustawione: "%s")
 
   -C=<tekst>, --subcp-conv=<tekst>
       Konwerowanie strony kodowej napisów. Puste by wyłączyć.
-      (ustawione: "$subcp_conv")
+      (ustawione: "%s")
 
   -E=<tekst>, --subeol-conv=<tekst>
       Konwertowanie typu oznaczenia końca linii. Puste by
-      wyłączyć. (ustawione: "$subeol_conv")
+      wyłączyć. (ustawione: "%s")
 
   -d=<od-do>, --depth=<od-do>
       Głębia przeszukiwania rekursywnego..
@@ -221,27 +221,22 @@ Opcje:
 
   -n=<tekst>, --nick=<tekst>
       Twój login do napiprojektu. Puste dla konta anonimowego.
-      (ustawione: "$auth_nick")
+      (ustawione: "%s")
 
   -p=<tekst>, --pass=<tesk>
       Twoje hasło do napiprojektu. Puste dla konta anonimowego.
-      (ustawione: "${auth_pass:+"***"}")
+      (ustawione: "%s")
 
   -L=<bool>, --login=<bool>
       Loguj się podanym wcześniej nickiem i hasłem.
-      (ustawione: $auth_login)
-EOF
-#  -r=<bool>, --subretry-restore=<bool> [szkic/koncepcja]
-#      Wznawia pobierania wcześniej zakończone niepowodzeniem,
-#      bez ponownego generowania sum kontrolnych. (ustawione: $subretry_restore)
-cat <<EOF
+      (ustawione: %s)
 
   --debug=<plik>
       Tryb debugowy
 
   --config=<plik>
       Nazwa konfiguracji lub pełna ścieżka. (Ustawione:
-      ${config:-"$NB_CONFIGDIR/config"})
+      %s)
 
   -h, --help, --usage
       Wyświetl pomoc
@@ -252,8 +247,16 @@ Napi-bash opublikowano na licencji GPL3:
   This program comes with  ABSOLUTELY NO WARRANTY;
   This program may be  freely redistributed  under
   the terms of the GNU GPL 3. For more information
-  read:   http://www.gnu.org/licenses/gpl-3.0.html
-EOF
+  read:   http://www.gnu.org/licenses/gpl-3.0.html\n' \
+    "$suboverwrite" "$subskipifexist" "$colors" \
+    "$subext" "$subext_autodetect" "$subext_prefix" \
+    "$subfmt_conv" "$subcp_conv" "$subeol_conv" \
+    "$auth_nick" "${auth_pass:+"***"}" "$auth_login" \
+    "${config:-"$NB_CONFIGDIR/config"}"
+
+#  -r=<bool>, --subretry-restore=<bool> [szkic/koncepcja]
+#      Wznawia pobierania wcześniej zakończone niepowodzeniem,
+#      bez ponownego generowania sum kontrolnych. (ustawione: $subretry_restore)
 
 	return 1
 }
@@ -263,9 +266,12 @@ ARGV() {
 
   ARGV__getopts "$@" || return 1
 
+  # niezbędny:
+  setup_bin_7z || return 1
+
+  # opjonalne:
   setup_bin_iconv
   setup_bin_subotage
-  setup_bin_7z || return 1
 
   setup_var_filesize
 
@@ -864,7 +870,7 @@ napi_poll() {
 
 
 #-------------------------------------------------------------------------------
-# Wznawianie pobierania
+# Wznawianie pobierania  TODO
 #-------------------------------------------------------------------------------
 subretry_store() {
   enabled "$subretry_store" || return 0
@@ -1114,7 +1120,7 @@ subfmt_convert__fmt_detect() {
   done < "$file"
 
   # fallback - tak na wszelki wypadek, nigdy nic nie wiadomo...
-  if [ -z "$fmt_detect_ret" ]; then
+  if [ -z "$fmt_detect_ret" ] && [ -n "$BIN_subotage" ]; then
     enabled "$DEBUG" && echo "fixme: autodetekcja fallback..."
 
     local ifmt="$(LANG=C "$BIN_subotage" -gi "$file" 2>&1)"
@@ -1122,14 +1128,11 @@ subfmt_convert__fmt_detect() {
       ifmt="${ifmt%% *}"
       case "$ifmt" in
         microdvd|mpl2|subrip|tmplayer|subviewer|fab) fmt_detect_ret="$ifmt";;
-        *) return 1;;
       esac
-    else
-      return 1
     fi
   fi
 
-  return 0
+  test -n "$fmt_detect_ret"
   #RETURNVAR: $fmt_detect_ret
 }
 
@@ -1421,12 +1424,13 @@ setup_bin_subotage() {
     *)
       subfmt_conv=""
       warn "Nieobsługiwana format napisów dla subfmt_conv, pomijam..."
+      return 1
   esac
 
   local findbin_ret
   if findbin subotage.sh subotage; then
     BIN_subotage="$findbin_ret"
-    test -z "$subfmt_conv" || setup_bin_subotage__fps
+    setup_bin_subotage__fps
   else
     subfmt_conv=""
     warn "Aby móc korzystać z opcji subfmt_conv, zainstaluj subotage..."
@@ -1444,7 +1448,7 @@ setup_bin_subotage__fps() {
   done
 
   if [ "${#BIN_subotage__fps_f[@]}" = "0" ]; then
-    warn "Konwersja formatów wymaga detekcji ilości klatek na sekundę. Zainstaluj: ffmpeg, mediainfo, mplayer lub mpv"
+    warn "Konwersja formatów która wymaga detekcji ilości klatek na sekundę. Zainstaluj: ffmpeg, mediainfo, mplayer lub mpv"
   fi
 }
 

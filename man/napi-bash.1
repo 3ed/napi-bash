@@ -1,100 +1,205 @@
 .\" Manpage for napi-bash.
-.TH NAPI-BASH 1 "2014-06-20" "0.50" "napi-bash"
+.TH NAPI-BASH 1 "2014-06-22" "0.50" "napi-bash"
 .SH NAZWA
 napi-bash - pobieranie polskich napisów do filmów..
 .SH SKŁADNIA
+.PP
+.nf
 napi-bash [opcje] <plik/folder> [kolejne pliki/foldery]
-.br
 napi-bash <-h|--help>
+.fi
+.fi
 .SH OPIS
-napi-bash to program do pobierania polskich napisów z serwerów napi-projectu.
+napi-bash to program do pobierania polskich napisów z serwerów napiprojekt.pl.
 .SH OPCJE
 .SS -o=<bool>, --suboverwrite=<bool>, --(no-)suboverwrite
-Nadpisuj pliki (domyślnie: nie)
-.br
-- Gdy wartość jest twierdząca, program nadpisze plik.
-.br
-- Gdy wartość jest przecząca, program sprawdzi czy nazwa.roz istnieje i jeśli tak: dokona sprawdzania plików od nazwa.0.roz do nazwa.99.roz aż napotka na nieistniejący (albo nadpisze nazwa.99.roz).
+Nadpisuj napisy (domyślnie: \fBnie\fR)
+.PP
+\fBUwaga\fR: Gdy opcja ustawiona jest na \fBnie\fR, program sprawdzi czy nazwa.roz istnieje i jeśli tak to dokona sprawdzania plików od nazwa.0.roz do nazwa.99.roz aż napotka na nieistniejący (albo nadpisze nazwa.99.roz).
+.fi
 .SS -s=<bool>, --skipifexist=<bool>, --(no-)skipifexist
-Pomijaj pobrane gdy plik z napisami już istnieje (domyślnie: nie)
-.br
-Uwaga: Przy autodetekcji rozszerzenia, będą pomijane rozszerzenia wszystkch obsługiwanych formatów i wartość opcji subext.
+.PP
+Pomijaj pobrane gdy plik z napisami już istnieje (domyślnie: \fBnie\fR)
+.fi
+.PP
+\fBUwaga\fR: Przy autodetekcji rozszerzenia, będą pomijane rozszerzenia wszystkch obsługiwanych formatów i wartość opcji subext.
+.fi
 .SS -c=<bool>|--colors=<bool>|--(no-)colors
+.PP
 Używaj kolorów (domyślnie: tak)
+.fi
 .SS -x=<tekst>, --subext=<tekst>
+.PP
 Rozszerzenie pliku napisów (domyślnie: txt)
+.fi
 .SS -X=<bool>, --subext-autodetect=<bool>, --(no-)subext-autodetect
-Dokonuj autodetekcji (domyślnie: nie)
-.br
-Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. Ta funkcja może spowolnić proces pobierania napisów. W razie niepowodzenia, użyta zostanie wartość opcji subext.
+.PP
+Dokonuj autodetekcji (domyślnie: \fBtak\fR)
+.fi
+.PP
+Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. W razie niepowodzenia, użyta zostanie wartość opcji subext.
+.fi
 .SS -P=<tekst>, --subext-prefix=<tekst>
+.PP
 Dodatkowy przedrostek przed rozszerzeniem pliku. Puste by wyłączyć. (domyślnie: "")
-.br
-Np: nazwa_pliku_z_filmem.moj_przedrostek.srt
+.fi
+.PP
+.nf
+Generuje: nazwa_pliku_z_filmem.\fBmoj_przedrostek\fR.rozszerzenie
+.fi
+.fi
 .SS -F=<tekst>, --subfmt-conv=<tekst>
+.PP
 Konwertowanie formatu napisów. Puste by wyłączyć. (domyślnie: "")
-.br
-Obsługiwane są następujące formaty: „fab”, „microdvd”, „mpl2”, „subviewer”, „subrip”, „tmplayer”.
+.fi
+.PP
+Obsługiwane są następujące formaty:
+.RS 4
+„fab”, „microdvd”, „mpl2”, „subviewer”, „subrip”, „tmplayer”.
+.RE
+.fi
 .SS -C=<tekst>, --subcp-conv=<tekst>
 Konwertowanie kodowania znaków. Puste by wyłączyć. (domyślnie: "")
-.br
-Obsługiwane kodowania to: „UTF-8”, „ISO-8859-2”, „WINDOWS-1252”
+.PP
+Obsługiwane kodowania to:
+.RS 4
+„UTF-8”, „ISO-8859-2”, „WINDOWS-1250”
+.RE
+.fi
+.PP
+Nie wiesz co to jest? Czytaj:
+.RS 4
+http://pl.wikipedia.org/wiki/Zestaw_znak%C3%B3w
+.RE
+.fi
 .SS -E=<tekst>, --subeol-conv=<tekst>
+.PP
 Konwertowanie typu oznaczenia końca linii. Puste by wyłączyć. (domyślnie: "")
-.br
-Obsługiwane typy to: „Dos”/„CRLF” lub „Unix”/„LF”
+.fi
+.PP
+Obsługiwane typy to:
+.RS 4
+„Dos”/„CRLF” lub „Unix”/„LF”
+.RE
+.fi
+.PP
+Nie wiesz co to jest? Czytaj:
+.RS 4
+http://pl.wikipedia.org/wiki/CRLF
+.RE
+.fi
 .SS -d=<od-do>, --depth=<od-do>
-Głębia przeszukiwania rekursywnego (domyślnie: ""). Przykładowe wartości <od-do>:
+.PP
+Głębia przeszukiwania rekursywnego (domyślnie: "").
+.fi
+.PP
+Przykładowe wartości <\fBod-do\fR>:
+.RS 4
+.nf
+\fB1\fR     ./pliki      ...   ./pliki
 .br
-1     ./pliki      ...   ./pliki
+\fB2-\fR    ./*/pliki    ...   ./*/..../*/pliki
 .br
-2-    ./*/pliki    ...   ./*/..../*/pliki
+\fB1-2\fR   ./pliki      ...   ./*/pliki
 .br
-1-2   ./pliki      ...   ./*/pliki
-.br
--4    ./pliki      ...   ./*/*/*/pliki
+\fB-4\fR    ./pliki      ...   ./*/*/*/pliki
+.fi
+.RE
+.fi
 .SS -g=<liczba>, --ge=<liczba>
-Tylko pliki większe bądź równe podanej ilości MiB. Dla opcji --ge=200 wynikami wyszukiwania będą pliki większe bądź równe 200MiB.
+.PP
+Tylko pliki większe bądź równe podanej ilości MiB. Dla opcji \fB--ge=200\fR wynikami wyszukiwania będą pliki większe bądź równe 200MiB.
+.fi
 .SS -l=<liczba>, --le=<liczba>
+.PP
 Tylko pliki mniejsze bądź równe podanej ilości MiB.
+.fi
 .SS -n=<tekst>, --nick=<tekst>
+.PP
 Twój login do napiprojektu. Pozostaw puste dla konta anonimowego.
+.fi
 .SS -p=<tekst>, --pass=<tesk>
 Twoje hasło do napiprojektu. Pozostaw puste dla konta anonimowego.
 .SS -L=<bool>, --login=<bool>
+.PP
 Loguj się podanym wcześniej nickiem i hasłem.
-.SS debug=<plik>
-Tryb debugowy
---config=<plik>
+.fi
+.SS --debug=<plik>
+.PP
+Tryb debugowy i plik do którego będą zapisywane informacje.
+.fi
+.PP
+\fBUwaga\fR: Jeżeli próbujesz nadpisać plik inny niż z rozszerzeniem \fB.nb_debug\fR, wtedy zostanie ono dodane do nazwy pliku...
+.fi
+.SS --config=<plik>
+.PP
 Alternatywny plik konfiguracyjny.
+.fi
+.PP
+\fBUwaga\fR: W przypadku gdy plik nie zostanie odnaleziony, ponowiona zostanie próba wewnątrz katalogu z konfiguracją...
+.fi
 .SS -h, --help, --usage
+.PP
 Wyświetl pomoc
+.fi
 .SH TYPY ARGUMENTÓW
 .SS bool (lub boolean)
-Argument logiczny typu prawda lub fałsz. Jako fałsz przyjmowane są następujące argumenty: „0”, „-”, „nie”, „off”, „fałsz”, „false”, „wyłącz” lub „”.
+.PP
+Argument logiczny typu prawda lub fałsz. Jako fałsz przyjmowane są następujące argumenty:
+.RS 4
+„0”, „-”, „nie”, „off”, „fałsz”, „false”, „wyłącz” lub „”.
+.RE
+.fi
 .SS tekst
+.PP
 Dowolny tekst.
+.fi
+.SS plik
+.PP
+Nazwa/Scieżka do pliku.
+.fi
+.SS liczba
+.PP
+Argument ma być liczbą.
+.fi
 .SS od-do
-Zakres od-do: „1-3” oznacza „od 1 do 3”; „-3” odznacza „do 3”; „2-” oznacza „od 2”; „1” oznacza „od 1 do 1” lub „1”.
+.PP
+Zakres liczbowy od-do: „1-3” oznacza „od 1 do 3”; „-3” odznacza „do 3”; „2-” oznacza „od 2”; „1” oznacza „od 1 do 1” lub „1”.
+.fi
 .SH BŁĘDY
+.PP
 Znalazłaś/eś jakiś błąd - wypełnij formularz dostępny na stronie projektu.
+.fi
 .SH ZOBACZ TEŻ
 .BR napi-bash (5)
 .SH AUTORZY
-Krzysztof (3ED) AS  -- krzysztof1987  [na]  gmail  [kropka]  com
+.SS Autor:
 .PP
-Strona projektu: https://3ed.github.io/napi-bash
+.B Krzysztof (3ED) AS
+.RS 4
+.nf
+\fBEmail:\fR krzysztof1987  [na]  gmail  [kropka]  com
 .fi
-.PP
-.B Program został wykonany przy użyciu tych narzędzi:
-    bash      - 99.(9)% całego kodu
-    curl      - domyślny agent pobierania
-    dd        - wczytywanie określonej ilości bajtów pliku
-    md5sum    - sumy kontrolne md5
+.RE
 .fi
+.SS Strona projektu:
 .PP
-.B Narzędzia opcjonalne:
-    iconv     - zmiana kodowania czcionek
-    subotage  - konwertowanie formatu napisów
-    libnotify - wyświetlanie komunikatów na pulpicie
+https://3ed.github.io/napi-bash
+.fi
+.SS Program został wykonany przy użyciu tych narzędzi:
+.PP
+.nf
+bash      - 99.(9)% całego kodu
+curl      - domyślny agent pobierania
+dd        - wczytywanie określonej ilości bajtów pliku
+md5sum    - sumy kontrolne md5
+.fi
+.fi
+.SS Narzędzia opcjonalne:
+.PP
+.nf
+iconv     - zmiana kodowania czcionek
+subotage  - konwertowanie formatu napisów
+libnotify - wyświetlanie komunikatów na pulpicie
+.fi
 .fi
