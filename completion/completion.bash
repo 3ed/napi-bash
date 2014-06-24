@@ -59,4 +59,4 @@ _napi-bash() {
 
 }
 
-complete -o nospace -o plusdirs -F _napi-bash napi-bash
+complete -o nospace -F _napi-bash napi-bash
