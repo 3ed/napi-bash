@@ -22,7 +22,7 @@ Nadpisuj napisy (domyślnie: \fBnie\fR)
 Pomijaj pobrane gdy plik z napisami już istnieje (domyślnie: \fBnie\fR)
 .fi
 .PP
-\fBUwaga\fR: Przy autodetekcji rozszerzenia, będą pomijane rozszerzenia wszystkch obsługiwanych formatów i wartość opcji subext.
+\fBUwaga\fR: Przy detekcji rozszerzenia, będą pomijane rozszerzenia wszystkich obsługiwanych formatów i wartość opcji subext.
 .fi
 .SS -c=<bool>|--colors=<bool>|--(no-)colors
 .PP
@@ -34,10 +34,10 @@ Rozszerzenie pliku napisów (domyślnie: txt)
 .fi
 .SS -X=<bool>, --subext-autodetect=<bool>, --(no-)subext-autodetect
 .PP
-Dokonuj autodetekcji (domyślnie: \fBtak\fR)
+Dokonuj detekcji rozszerzenia na podstawie zawartości (domyślnie: \fBtak\fR)
 .fi
 .PP
-Napiprojekt trzyma w swojej bazie pliki w różnych formatach, autodetekcję ma wykonywać program-klient. W razie niepowodzenia, użyta zostanie wartość opcji subext.
+Napiprojekt trzyma w swojej bazie pliki w różnych formatach, detekcję ma wykonywać program-klient. W razie niepowodzenia, użyta zostanie wartość opcji subext.
 .fi
 .SS -P=<tekst>, --subext-prefix=<tekst>
 .PP
@@ -45,7 +45,7 @@ Dodatkowy przedrostek przed rozszerzeniem pliku. Puste by wyłączyć. (domyśln
 .fi
 .PP
 .nf
-Generuje: nazwa_pliku_z_filmem.\fBmoj_przedrostek\fR.rozszerzenie
+Generuje: nazwa_pliku_z_filmem.\fBmoj_przedrostek\fR.roz
 .fi
 .fi
 .SS -F=<tekst>, --subfmt-conv=<tekst>
@@ -90,19 +90,16 @@ http://pl.wikipedia.org/wiki/CRLF
 .fi
 .SS -d=<od-do>, --depth=<od-do>
 .PP
-Głębia przeszukiwania rekursywnego (domyślnie: "").
+Głębia przeszukiwania rekurencyjnego dla drzewa podkatalogów katalogu wskazanego jako parametr programu (domyślnie: "").
 .fi
 .PP
-Przykładowe wartości <\fBod-do\fR>:
+Przykładowe wartości <\fBod-do\fR> i ich rozwinięcia:
 .RS 4
 .nf
-\fB1\fR     ./pliki      ...   ./pliki
-.br
-\fB2-\fR    ./*/pliki    ...   ./*/..../*/pliki
-.br
-\fB1-2\fR   ./pliki      ...   ./*/pliki
-.br
-\fB-4\fR    ./pliki      ...   ./*/*/*/pliki
+\fB1\fR   : wskazany/pliki    <pomiędzy>  wskazany/pliki
+\fB2-\fR  : wskazany/*/pliki  <pomiędzy>  wskazany/*/.../*/pliki
+\fB1-2\fR : wskazany/pliki    <pomiędzy>  wskazany/*/pliki
+\fB-4\fR  : wskazany/pliki    <pomiędzy>  wskazany/*/*/*/pliki
 .fi
 .RE
 .fi
@@ -122,7 +119,7 @@ Twój login do napiprojektu. Pozostaw puste dla konta anonimowego.
 Twoje hasło do napiprojektu. Pozostaw puste dla konta anonimowego.
 .SS -L=<bool>, --login=<bool>
 .PP
-Loguj się podanym wcześniej nickiem i hasłem.
+Loguj się podanym wcześniej nickiem i hasłem. (domyślnie: \fBnie\fR)
 .fi
 .SS --debug=<plik>
 .PP
@@ -156,7 +153,7 @@ Dowolny tekst.
 .fi
 .SS plik
 .PP
-Nazwa/Scieżka do pliku.
+Nazwa/Ścieżka do pliku.
 .fi
 .SS liczba
 .PP

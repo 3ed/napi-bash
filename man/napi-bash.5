@@ -53,7 +53,7 @@ Patrz:
 .BR napi-bash (1)
 .SS subfmt_ext[Format]="Rozszerzenie"
 .PP
-Opcja umożliwia zmianę domyślnego rozszerzenia formatu. Obsługiwanie formaty i ich rozszerzenia:
+Opcja umożliwia zmianę domyślnego rozszerzenia formatu. Domyślne rozszerzenia dla obsługiwanych formatów:
 .fi
 .PP
 \fBFormat\fR = Rozszerzenie:
@@ -68,19 +68,22 @@ Opcja umożliwia zmianę domyślnego rozszerzenia formatu. Obsługiwanie formaty
 .fi
 .RE
 .fi
-.SS subfmt_lasting_time="3000"
+.SS subfmt_lasting_time=<liczba>
 .PP
-Minimalny czas wyświetlania linijki w ms dla napisów konwertowanych z formatu w którym nie ma określonego czasu wygasania. (patrz, polecenie: subotage.sh --lasting-time)
+Minimalny czas wyświetlania linijki w ms dla napisów konwertowanych z formatu w którym nie ma określonego czasu wygasania. Domyślnie: 3000. (patrz, polecenie: subotage.sh --lasting-time)
 .fi
 .SS
 .nf
+videoext=(<lista>)
+.fi
+.PP
+Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter. Domyślnie:
+.RS 4
 videoext=(.3gp .avi .asf .divx .m4v .mkv .mov .mp4 .mpe .mpeg .mpg .ogg .ogv .rmvb .wmv .qt)
+.RE
 .fi
 .PP
-Rozszerzenia jakie mogą mieć pliki filmowe.. Używaj tylko małych liter.
-.fi
-.PP
-Można stosować „Brace expansion”, np:
+\fBUwaga\fR: można też zastosować „Brace expansion”, np:
 .nf
 .RS 4
 videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
@@ -111,15 +114,20 @@ Tylko dla katalogów, przy wyszukiwaniu w nich. \fB[domyślnie]\fR
 .PP
 \fBnever\fR
 .RS 4
-Nigdy, wszyskie są ok...
+Nigdy, wszystkie są ok...
 .RE
 .RE
 .fi
-.SS DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
-Agent pobierania plików (\fB%o\fR wyjściowy; \fB%u\fR adres url)
+.SS DLAGENT="Polecenie"
+.PP
+Program pobierający pliki (\fB%o\fR wyjściowy; \fB%u\fR adres url). Domyślnie:
+.RS 4
+DLAGENT="curl -fLsS --retry 3 --retry-delay 3 -o %o %u"
+.RE
+.fi
 .SS msg_status[ID]="Treść"
 .PP
-Format wyjścia dla notyfikacji "Status". Notyfikacja pojawia się za każdym razem gdy program zakończył operacje dla pojedyńczego pliku, chyba że wyłączono w \fBmsg_{cli,gui}_disabled_array\fR. Zobacz też sekcje \fBTAGI\fR. Domyślne ustawienia:
+Format wyjścia dla notyfikacji "Status". Notyfikacja pojawia się za każdym razem gdy program zakończył operacje dla pojedynczego pliku, chyba że wyłączono w \fBmsg_{cli,gui}_disabled_array\fR. Zobacz też sekcje \fBTAGI\fR. Domyślne ustawienia:
 .fi
 .PP
 \fBID\fR = Treść:
@@ -129,40 +137,56 @@ Format wyjścia dla notyfikacji "Status". Notyfikacja pojawia się za każdym ra
 \fB1\fR   = %1%bBrak napisów%R dla %i%f
 \fB2\fR   = %1Brak uprawnień do zapisu w folderze z plikiem: %f
 \fB3\fR   = %1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f
-\fB100\fR = %1Niepowiodła sie detekcja formatu napisów dla: %f
-\fB101\fR = %1Niepowiodło się konwertowanie formatu napisów dla: %f
+\fB100\fR = %1Nie powiodła się detekcja formatu napisów dla: %f
+\fB101\fR = %1Nie powiodło się konwertowanie formatu napisów dla: %f
+\fB102\fR = %1Nie powiodło się konwertowanie strony kodowej napisów dla: %f
 \fB254\fR = %1DLAGENT nie zawiera tagu %o dla pliku wyjściowego..
 \fB255\fR = %1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?
 .fi
 .RE
 .fi
-.SS msg_cli_disabled_array=()
-.SS msg_gui_disabled_array=(0 1)
+.SS msg_cli_disabled_array=(<lista>)
 .PP
-Wyłącz info dla następujących treści (patrz na: \fBmsg_status\fR) #tablica id
+Lista \fBID\fR dla których wyświetlanie informacji w wierszu poleceń zostanie pominięte, patrz na \fBID\fR w: \fBmsg_status\fR. Domyślnie puste.
 .fi
+.SS msg_gui_disabled_array=(<lista>)
 .PP
-\fBUwaga\fR: 0 i 1 mogą być męczące w Gnome3 (domyślnie wyłączone)
+Lista \fBID\fR dla których wyświetlanie informacji poprzez notyfikację systemową zostanie pominięte, patrz na \fBID\fR w: \fBmsg_status\fR. W Gnome3 notyfikacje dla \fBID=0\fR i \fBID=1\fR mogą być męczące, dlatego domyślnie są wyłączone:
+.RS 4
+msg_gui_disabled_array=(0 1)
+.RE
 .fi
-.SS msg_raport=""
+.SS msg_raport="Format"
 .PP
-Format wyjścia dla notyfikacji "Raport". Notyfikacja pojawia się tylko raz tuż po wykonaniu wszystkich zadań podsumowując je, chyba że wyłączono w \fBraport_{cli,gui}_enabled\fR. Zobacz też sekcje: \fBTAGI\fR.
+Format wyjścia dla notyfikacji raportu. Notyfikacja pojawia się tylko raz tuż po wykonaniu wszystkich zadań podsumowując je, chyba że wyłączono w \fBraport_{cli,gui}_enabled\fR. Zobacz też sekcje: \fBTAGI\fR. Domyślnie:
+.RS 4
+msg_raport="Łącznie pobranych napisów: %b%d/%a%B"
+.RE
 .fi
-.SS raport_cli_enabled=1
-.SS raport_gui_enabled=1
+.SS raport_cli_enabled=<bool>
+.SS raport_gui_enabled=<bool>
 .PP
-Wyświetlaj raport końcowy (fałsz/prawda) #0/1
+Wyświetlaj raport końcowy (fałsz/prawda). Domyślnie:
+.nf
+.RS 4
+raport_cli_enabled="tak"
+raport_gui_enabled="tak"
+.RE
 .fi
-.SS gui_int_warn=1
+.fi
+.SS gui_int_warn=<bool>
 .PP
-Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... (fałsz/prawda) #0/1
+Wyświetlaj notyfikacje dla uwag nie odnoszących się bezpośrednio do pobieranych napisów. Np: informacje o brakujących programach pomocniczych... Domyślnie:
+.RS 4
+gui_int_warn="tak"
+.RE
 .fi
 .SH TAGI
 .SS Tagi dla msg_raport:
 .PP
 .nf
 \fB%d\fR ilość pomyślnie pobranych napisów,
-\fB%n\fR ilość noepobranych napisów,
+\fB%n\fR ilość niepobranych napisów,
 \fB%a\fR ilość wszystkich razem.
 .fi
 .fi

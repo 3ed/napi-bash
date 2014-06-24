@@ -36,9 +36,9 @@ msg_status[0]="%2%bPobrano%R dla %i%f"
 msg_status[1]="%1%bBrak napisów%R dla %i%f"
 msg_status[2]="%1Brak uprawnień do zapisu w folderze z plikiem: %f"
 msg_status[3]="%1Niewystarczająca ilość wolnego miejsca na urządzeniu z plikiem: %f"
-msg_status[100]="%1Niepowiodła sie detekcja formatu napisów dla: %f"
-msg_status[101]="%1Niepowiodło się konwertowanie formatu napisów dla: %f"
-msg_status[102]="%1Niepowiodło się konwertowanie strony kodowej napisów dla: %f"
+msg_status[100]="%1Nie powiodła się detekcja formatu napisów dla: %f"
+msg_status[101]="%1Nie powiodło się konwertowanie formatu napisów dla: %f"
+msg_status[102]="%1Nie powiodło się konwertowanie strony kodowej napisów dla: %f"
 msg_status[200]="%1Zdalny serwer zwrócił: Przerwa techniczna..."
 msg_status[254]="%1DLAGENT nie zawiera tagu %o dla pliku wyjściowego.."
 msg_status[255]="%1Pobieranie pliku z napisami nie powiodło się, problemy z połączeniem?"
@@ -1362,7 +1362,7 @@ validate_auth() {
     fi
   fi
 
-  warn "Autoryzacja niepowiodła się: $auth_status"
+  warn "Autoryzacja nie powiodła się: $auth_status"
   unset napi_nick napi_pass
 
   return 1
@@ -1448,7 +1448,7 @@ setup_bin_subotage__fps() {
   done
 
   if [ "${#BIN_subotage__fps_f[@]}" = "0" ]; then
-    warn "Konwersja formatów która wymaga detekcji ilości klatek na sekundę. Zainstaluj: ffmpeg, mediainfo, mplayer lub mpv"
+    warn "Konwersja formatów wymaga detekcji ilości klatek na sekundę. Zainstaluj: ffmpeg, mediainfo, mplayer lub mpv"
   fi
 }
 
