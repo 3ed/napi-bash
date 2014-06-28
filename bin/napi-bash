@@ -53,6 +53,11 @@ cli_msg_fmt="cli_esc"
 gui_raport_fmt="gui_xml"
 cli_raport_fmt="cli_esc"
 
+# obsługiwane wersje to: "0.3", "0.4"
+fps_detect_mpv_version="0.4" #CHANGEME#
+
+fps_detect_tools=(ffprobe mediainfo mplayer mpv)
+
 gui_msg() {
   # 1 = type
   # 2 = msg
@@ -166,6 +171,10 @@ printfo() {
   fi
 
   printf "$@" >&$t
+}
+
+is_function() {
+  declare -F "$1" &> /dev/null
 }
 
 #-------------------------------------------------------------------------------
@@ -1005,16 +1014,23 @@ subfmt_convert__fps__mplayer() {
 subfmt_convert__fps__mpv() {
   local bin="$1" file="$2"
   fps_sub=
-  local output="$("$bin" \
-      --playing-msg='===FPS=== ${=fps}'  \
-      --vo=null \
-      --ao=null \
-      --frames=1 \
-      --quiet \
-      --no-cache \
-      --no-config \
-      "$file")" \
-    && [[ "$output" =~ '===FPS=== '([0-9.]*) ]] \
+
+  local -a args
+
+  case "$fps_detect_mpv_version" in
+    0.3)
+      args=("--playing-msg='::===FPS===:: \${=fps}'" --vo=null
+      --ao=null --frames=1 --quiet --no-cache --no-config)
+      ;;
+    0.4)
+      args=("--term-playing-msg='::===FPS===:: \${=fps}'" --vo=null
+      --ao=null --frames=1 --quiet --no-cache --no-config)
+      ;;
+    *) return 1
+  esac
+
+  local output="$("$bin" "${args[@]}" "$file")" \
+    && [[ "$output" =~ '::===FPS===:: '([0-9.]*) ]] \
     && fps_sub="${BASH_REMATCH[1]}"
   #RETURNVAR: $fps_sub
 }
@@ -1440,15 +1456,19 @@ setup_bin_subotage() {
 setup_bin_subotage__fps() {
   local i bin findbin_ret
 
-  for i in ffprobe mediainfo mplayer mpv; do
-    if findbin $i; then
+  for i in "${fps_detect_tools[@]}"; do
+    if findbin "$i" && is_function "subfmt_convert__fps__${i// /_}"; then
       BIN_subotage__fps_b+=("$findbin_ret")
       BIN_subotage__fps_f+=("$i")
     fi
   done
 
   if [ "${#BIN_subotage__fps_f[@]}" = "0" ]; then
-    warn "Konwersja formatów wymaga detekcji ilości klatek na sekundę. Zainstaluj: ffmpeg, mediainfo, mplayer lub mpv"
+    local tools
+    for i in "${fps_detect_tools[@]}"; do
+      tools+="${tools:+", "}$i"
+    done
+    warn "Konwersja formatów wymaga detekcji ilości klatek na sekundę. Zainstaluj: $tools"
   fi
 }
 
