@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="pl">
+<html>
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Napi-bash</title>
+    <title>Napi-bash by 3ed</title>
 
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
@@ -17,49 +17,48 @@
     <div class="wrapper">
       <header>
         <h1 class="header">Napi-bash</h1>
-        <p class="header">Pobieranie polskich napisów do filmów przy użyciu bazy NapiProjektu...</p>
+        <p class="header">Pobieranie polskich napisów do filmów przy użyciu bazy NapiProjektu..</p>
 
         <ul>
-          <li class="download"><a class="buttons" href="https://github.com/3ed/napi-bash/archive/v0.50.1.tar.gz">Pobierz</a></li>
-          <li><a class="buttons github" href="https://github.com/3ed/napi-bash">Zobacz GitHub</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/3ed/napi-bash/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/3ed/napi-bash/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/3ed/napi-bash">View On GitHub</a></li>
         </ul>
 
-        <p class="header">Projekt rozwijany przez <a class="header name" href="https://github.com/3ed">3ED</a></p>
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/3ed">3ed</a></p>
 
 
       </header>
       <section>
-        <h3><a name="czym_jest" class="anchor" href="#czym_jest"><span class="octicon octicon-link"></span></a>Czym jest napi-bash</h3>
+        <h1>
+<a name="czym-jest-napi-bash" class="anchor" href="#czym-jest-napi-bash"><span class="octicon octicon-link"></span></a>Czym jest napi-bash</h1>
 
-        <ul style="float:right">
-          <li><a href="#czym_jest">Czym jest napi-bash</a></li>
-          <li><a href="#lekki_ale">Lekki ale wystarczająco potężny</a></li>
-          <li><a href="#zrzuty_ekranu">Zrzuty ekranu</a></li>
-          <li><a href="#wiecej">Więcej...</a></li>
-        </ul>
+<p>Napi-bash to lekki i szybki program pobierający polskie napisy do plików filmowych. Dzięki porzuceniu zewnętrznych technologi na rzecz wbudowanych w bash 4, program jest szybki i ma małe wymagania i zależności (każdy Linux/BSD/cygwin/itd).</p>
 
-        <p>Napi-bash to lekki i szybki program pobierający polskie napisy do plików filmowych. Dzięki porzuceniu zewnętrznych technologi na rzecz wbudowanych w bash 4, program jest szybki i ma małe wymagania i zależności (każdy Linux/BSD/cygwin/itd).</p>
+<h1>
+<a name="podstawowe-funckje" class="anchor" href="#podstawowe-funckje"><span class="octicon octicon-link"></span></a>Podstawowe funckje</h1>
 
-        <h3><a name="lekki_ale" class="anchor" href="#lekki_ale"><span class="octicon octicon-link"></span></a>Lekki ale wystarczająco potężny</h3>
+<ul>
+<li>Pobieranie współbieżne (zadania wykonywane współbieżnie skracają czas oczekiwania na rezultaty)</li>
+<li>Konwertowanie formatów (tak by twój odtwarzacz stacjonarny mógł odtwarzać napisy zaraz po ściągnięciu)</li>
+<li>Konwertowanie kodowania czcionek (niektóre napisy w sieci są zakodowane w nowocześniejszym UTF8, co oznacza że mogą nie działać na twoim urządzeniu stacjonarnym)</li>
+<li>Detekcja formatu i rozszerzenia (dla wybrednych odtwarzaczy, które obsługują wiele formatów)</li>
+<li>Notyfikacje systemowe (informacje o postępie, bez terminala)</li>
+<li>Zabezpieczenie przed nadpisywaniem starych plików z napisami</li>
+<li>Możliwość konfiguracji ww opcji i różnych innych aspektów programu za pomocą pliku konfiguracyjnego</li>
+<li>Szybkie skanowanie wnętrz katalogów (po rozszerzeniach i rozmiarze plików)</li>
+<li>Dowolna głębia skanowania wnętrz katalogów (zakresy)</li>
+</ul><h1>
+<a name="zrzuty-ekranu" class="anchor" href="#zrzuty-ekranu"><span class="octicon octicon-link"></span></a>Zrzuty ekranu</h1>
 
-        <ul>
-          <li>Pobieranie współbieżne (zadania wykonywane współbieżnie skracają czas oczekiwania na rezultaty)</li>
-          <li>Szybkie skanowanie wnętrz katalogów (po rozszerzeniach i rozmiarze plików)</li>
-          <li>Dowolna głębia skanowania wnętrz katalogów (zakresy)</li>
-          <li>Konwertowanie formatów (tak by twój odtwarzacz stacjonarny mógł odtwarzać napisy zaraz po ściągnięciu)</li>
-          <li>Konwertowanie kodowania czcionek (niektóre napisy w sieci są zakodowane w nowocześniejszym UTF8, co oznacza że mogą nie działać na twoim urządzeniu stacjonarnym)</li>
-          <li>Detekcja formatu (dla wybrednych odtwarzaczy, które obsługują wiele formatów)</li>
-          <li>Notyfikacje systemowe (informacje o postępie, bez terminala)</li>
-          <li>Zabezpieczenie przed nadpisywaniem starych plików z napisami</li>
-          <li>Możliwość konfiguracji ww opcji i różnych innych aspektów programu za pomocą pliku konfiguracyjnego</li>
-        </ul>
+<p><img src="/images/screenshot.png" alt="zrzut ekranu: terminal, notyfikacja"></p>
 
-        <h3><a name="zrzuty_ekranu" class="anchor" href="#zrzuty_ekranu"><span class="octicon octicon-link"></span></a>Zrzuty ekranu</h3>
+<h1>
+<a name="wi%C4%99cej" class="anchor" href="#wi%C4%99cej"><span class="octicon octicon-link"></span></a>Więcej</h1>
 
-        <img src="images/screenshot.png" alt="zrzut ekranu: terminal, notyfikacja" />
-        <h3><a name="wiecej" class="anchor" href="#wiecej"><span class="octicon octicon-link"></span></a>Więcej...</h3>
-<p>Przejdź na <a href="https://github.com/3ed/napi-bash/wiki">wiki projektu</a>.</p>
-
+<ul>
+<li><a href="https://github.com/3ed/napi-bash/wiki">Zobacz wiki</a></li>
+</ul>
       </section>
       <footer>
         <p><small>Hosted on <a href="http://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
