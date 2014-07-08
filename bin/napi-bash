@@ -1052,7 +1052,7 @@ subfmt_convert__fps__ffprobe() {
   local output="$("$bin" \
       "$file" \
       -v 0 \
-      -select_reteams v \
+      -select_streams v \
       -print_format csv \
       -show_entries stream=avg_frame_rate,r_frame_rate)" \
     && [[ "$output" =~ stream,([0-9/]*),([0-9/]*) ]] \
