@@ -1193,7 +1193,7 @@ subfmt_convert() {
 
   # Konwertowanie
   output="$(LANG=C "$BIN_subotage" $fps_opts $fps_ret $lasting_time_opts \
-    -if "${ifmt%% *}" \
+    -if "$fmt_detect_ret" \
     -i "$subfile" \
     -o "$subftmp" \
     -of "$subfmt_conv" 2>&1)"
