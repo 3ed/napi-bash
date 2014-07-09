@@ -1231,12 +1231,14 @@ subfmt_convert() {
   # Przeprowadzanie post-operacji według subostat
   case "$subostat" in
     'Done')
-      cp \
-        --remove-destination \
-        --no-target-directory \
-        --dereference \
-        -- "$subftmp" "$subfile" &> /dev/null \
-        && unlink "$subftmp" || return 101
+      test -f "$subftmp" \
+        && cp \
+          --remove-destination \
+          --no-target-directory \
+          --dereference \
+          -- "$subftmp" "$subfile" &> /dev/null \
+        && unlink "$subftmp" \
+        || return 101
       ;;
     "No convertion is needed"*)
       true
