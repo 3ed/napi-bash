@@ -795,7 +795,6 @@ generate_hashes() {
 # Poll i forkowanie
 #-------------------------------------------------------------------------------
 napi_poll__fork_hash() {
-  local fifo_out="$1"
   local c md5sum napisum
 
   for ((c=0; $c < ${#files[@]}; c++)); do
@@ -809,30 +808,28 @@ napi_poll__fork_hash() {
     test "$md5sum" != "$napisum" \
       || get_hash "${files[$c]}"
 
-    echo "$? $c $md5sum $napisum" > "$fifo_out"
+    echo "$? $c $md5sum $napisum" >&4
   done
 
-  echo bye > "$fifo_out"
+  echo bye >&4
 }
 
 napi_poll__fork_download() {
-  local fifo_in="$1" fifo_out="$2"
   local ret=0
   local -a childARG
 
   enabled "$auth_login" || unset napi_nick napi_pass
 
-  while true; do
-    read -a childARG < "$fifo_in" || continue
+  while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
 
     sub_download "${childARG[@]}"
     childARG[0]=$?
 
-    echo "${childARG[@]}" > "$fifo_out"
-  done
+    echo "${childARG[@]}" >&3
+  done <&4
 
-  echo bye > "$fifo_out"
+  echo bye >&3
 }
 
 napi_poll() {
@@ -842,29 +839,25 @@ napi_poll() {
 
   # Obsługa sygnałów / czyszczenie
   trap 'kill ${NB_childPID[@]} &> /dev/null; rm -rf "$CACHE"' EXIT
-  trap 'NB_USERBREAK=1; kill ${NB_childPID[@]} &> /dev/null; echo bye > "$CACHE/download.fifo"; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
+  trap 'NB_USERBREAK=1; kill ${NB_childPID[@]} &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
 
 # Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
 # do komunikacji pomiędzy forkiem a rodzicem
-  mkfifo "$CACHE/hash.fifo"
-  mkfifo "$CACHE/download.fifo"
+  # tworzenie fifo
+  mkfifo "$CACHE/hash.fifo" "$CACHE/download.fifo"
 
-  # args: out
-  napi_poll__fork_hash \
-    "$CACHE/hash.fifo"      & NB_childPID+=($!)
+  # otwieranie fifo fd
+  exec 4<>"$CACHE/hash.fifo" 3<>"$CACHE/download.fifo"
 
-  # args: in out
-  napi_poll__fork_download \
-    "$CACHE/hash.fifo" \
-    "$CACHE/download.fifo"  & NB_childPID+=($!)
+  napi_poll__fork_hash      & NB_childPID+=($!)
+  napi_poll__fork_download  & NB_childPID+=($!)
 
   local ext
   local -a childARG
 
   validate_auth
 
-  while true; do
-    read -a childARG < "$CACHE/download.fifo" || continue
+  while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
 
     if [ "${childARG[0]}" = "0" ]; then
@@ -884,7 +877,12 @@ napi_poll() {
     fi
 
     napi_msg "${childARG[1]}" "${childARG[0]}"
-  done
+  done <&3
+
+  trap 'NB_USERBREAK=1; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
+
+  # zamykanie fifo fd
+  exec 3>&- 4>&-
 }
 
 
