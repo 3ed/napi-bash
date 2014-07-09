@@ -808,10 +808,10 @@ napi_poll__fork_hash() {
     test "$md5sum" != "$napisum" \
       || get_hash "${files[$c]}"
 
-    echo "$? $c $md5sum $napisum" >&4
+    echo "$? $c $md5sum $napisum" >&$NB_queue_hash
   done
 
-  echo bye >&4
+  echo bye >&$NB_queue_hash
 }
 
 napi_poll__fork_download() {
@@ -826,10 +826,10 @@ napi_poll__fork_download() {
     sub_download "${childARG[@]}"
     childARG[0]=$?
 
-    echo "${childARG[@]}" >&3
-  done <&4
+    echo "${childARG[@]}" >&$NB_queue_download
+  done <&$NB_queue_hash
 
-  echo bye >&3
+  echo bye >&$NB_queue_download
 }
 
 napi_poll() {
@@ -839,7 +839,7 @@ napi_poll() {
 
   # Obsługa sygnałów / czyszczenie
   trap 'kill ${NB_childPID[@]} &> /dev/null; rm -rf "$CACHE"' EXIT
-  trap 'NB_USERBREAK=1; kill ${NB_childPID[@]} &> /dev/null; echo bye >&3; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
+  trap 'NB_USERBREAK=1; kill ${NB_childPID[@]} &> /dev/null; echo bye >&$NB_queue_download; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
 
 # Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
 # do komunikacji pomiędzy forkiem a rodzicem
@@ -847,7 +847,8 @@ napi_poll() {
   mkfifo "$CACHE/hash.fifo" "$CACHE/download.fifo"
 
   # otwieranie fifo fd
-  exec 4<>"$CACHE/hash.fifo" 3<>"$CACHE/download.fifo"
+  exec {NB_queue_hash}<>"$CACHE/hash.fifo" \
+       {NB_queue_download}<>"$CACHE/download.fifo"
 
   napi_poll__fork_hash      & NB_childPID+=($!)
   napi_poll__fork_download  & NB_childPID+=($!)
@@ -877,12 +878,9 @@ napi_poll() {
     fi
 
     napi_msg "${childARG[1]}" "${childARG[0]}"
-  done <&3
+  done <&$NB_queue_download
 
   trap 'NB_USERBREAK=1; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
-
-  # zamykanie fifo fd
-  exec 3>&- 4>&-
 }
 
 
