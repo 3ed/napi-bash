@@ -1456,6 +1456,7 @@ setup_bin_iconv() {
   local findbin_ret
   if findbin iconv; then
     BIN_iconv="$findbin_ret"
+  else
     subcp_conv=""
     warn "Aby móc korzystać z opcji subcp_conv, zainstaluj iconv..."
   fi
