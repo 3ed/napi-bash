@@ -500,7 +500,7 @@ early__debug() {
         DEBUG=1
         local debug_log="${opt#*=}"
         if [ -z "$debug_log" ] || [ -d "$debug_log" ]; then
-          debug_log+="${debug_log:+"/"}napi-bash.$(date +"%s").$$.nb_debug"
+          debug_log+="${debug_log:+"/"}napi-bash.nb_debug"
         else
           if [ -f "$debug_log" ]; then
             test "${debug_log##*.}" = "nb_debug" || debug_log+=".nb_debug"
@@ -1017,7 +1017,7 @@ subfmt_convert__fps__mplayer() {
     -ao null \
     -frames 1 \
     -identify \
-    "$file" 2> /dev/null)" \
+    -- "$file" 2> /dev/null)" \
     && [[ "$output" =~ 'ID_VIDEO_FPS='([0-9.]*) ]] \
     && fps_sub="${BASH_REMATCH[1]}"
   #RETURNVAR: $fps_sub
@@ -1028,22 +1028,27 @@ subfmt_convert__fps__mpv() {
   fps_sub=
 
   local -a args
+  local msg="::NAPI-BASH::FPS=" line
 
   case "$fps_detect_mpv_version" in
     0.3)
-      args=("--playing-msg='::===FPS===:: \${=fps}'" --vo=null
+      args=("--playing-msg=$msg\${=fps}" --vo=null
       --ao=null --frames=1 --quiet --no-cache --no-config)
       ;;
     0.4)
-      args=("--term-playing-msg='::===FPS===:: \${=fps}'" --vo=null
+      args=("--term-playing-msg=$msg\${=fps}" --vo=null
       --ao=null --frames=1 --quiet --no-cache --no-config)
       ;;
     *) return 1
   esac
 
-  local output="$("$bin" "${args[@]}" "$file")" \
-    && [[ "$output" =~ '::===FPS===:: '([0-9.]*) ]] \
-    && fps_sub="${BASH_REMATCH[1]}"
+  # notka: ten test robi za returna
+  while read line; do
+    test "${line:0:${#msg}}" = "$msg" \
+      && fps_sub="${line:${#msg}}" \
+      && break
+  done < <("$bin" "${args[@]}" -- "$file" 2>&1)
+
   #RETURNVAR: $fps_sub
 }
 
@@ -1150,13 +1155,14 @@ subfmt_convert__fmt_detect() {
 
   # fallback - tak na wszelki wypadek, nigdy nic nie wiadomo...
   if [ -z "$fmt_detect_ret" ] && [ -n "$BIN_subotage" ]; then
-    enabled "$DEBUG" && echo "fixme: autodetekcja fallback..."
+    enabled "$DEBUG" && echo "!! [ fmt_detect ]: fallback do subotage..."
 
-    local ifmt="$(LANG=C "$BIN_subotage" -gi "$file" 2>&1)"
-    if [ "$ifmt" != "not detected" ]; then
-      ifmt="${ifmt%% *}"
-      case "$ifmt" in
-        microdvd|mpl2|subrip|tmplayer|subviewer|fab) fmt_detect_ret="$ifmt";;
+    local -a ifmt
+    IFS=" " read -a ifmt < <(LANG=C "$BIN_subotage" -gi "$file" 2>&1)
+
+    if [ "${ifmt[0]}" != "not detected" ]; then
+      case "${ifmt[0]}" in
+        microdvd|mpl2|subrip|tmplayer|subviewer|fab) fmt_detect_ret="${ifmt[0]}";;
       esac
     fi
   fi
@@ -1204,30 +1210,46 @@ subfmt_convert() {
     && test -z "${subfmt_lasting_time//[0-9]/}" \
     && lasting_time_opts="--lasting-time $subfmt_lasting_time"
 
-  # Konwertowanie
-  output="$(LANG=C "$BIN_subotage" $fps_opts $fps_ret $lasting_time_opts \
+  # Przeprowadzanie konwersji i zapis stanu w subostat
+  local subostat='Done' line
+
+  while read line; do
+    if [ "$subostat" = "Done" ]; then
+      case "$line" in
+        "An error occured"*) subostat='Error';;
+      esac
+    else
+      subostat="$line"
+      break
+    fi
+  done < <(LANG=C "$BIN_subotage" $fps_opts $fps_ret $lasting_time_opts \
     -if "$fmt_detect_ret" \
     -i "$subfile" \
     -o "$subftmp" \
-    -of "$subfmt_conv" 2>&1)"
+    -of "$subfmt_conv" 2>&1)
 
-  # Sprawdzanie wyniku konwersji
-  if [[ "$output" =~ "An error occured" ]]; then
-    if ! [[ "$output" =~ "No convertion is needed" ]]; then
+  # Przeprowadzanie post-operacji według subostat
+  case "$subostat" in
+    'Done')
+      cp \
+        --remove-destination \
+        --no-target-directory \
+        --dereference \
+        -- "$subftmp" "$subfile" &> /dev/null \
+        && unlink "$subftmp" || return 101
+      ;;
+    "No convertion is needed"*)
+      true
+      ;;
+    *)
+      enabled "$DEBUG" && echo "!! [ subotage ]: $subostat"
       return 101
-    fi
-  else
-    cp \
-      --remove-destination \
-      --no-target-directory \
-      --dereference \
-      -- "$subftmp" "$subfile" &> /dev/null && unlink "$subftmp" || return 101
-  fi
+  esac
 
-  test -f "$subftmp" && unlink "$subftmp"
-
+  # Rozszerzenie zgodne z formatem lub subext
   test -n "${subfmt_ext[$subfmt_conv]}" \
-    && ext="${subfmt_ext[$subfmt_conv]}"
+    && ext="${subfmt_ext[$subfmt_conv]}" \
+    || ext="${subext:-"txt"}"
 
   return 0
 
@@ -1242,34 +1264,33 @@ subcp_convert() {
   local subfile="$CACHE/_${md5}_${napi}.sub"
 
   # DETEKCJA KONWERTOWANIA
-  local subcp_conv_from=""
-  local subcp_conv_to="$subcp_conv"
-  local encodingtype="$(file \
-        --brief \
-        --mime-encoding \
-        --exclude apptype \
-        --exclude tokens \
-        --exclude cdf \
-        --exclude compress \
-        --exclude elf \
-        --exclude soft \
-        --exclude tar \
-        -- "${subfile}")"
+  local from to="$subcp_conv" subcp_conv_to="$subcp_conv" enctype
 
-  if [ "$?" = "0" ] && [ -n "$encodingtype" ]; then
-    case "${encodingtype,,}" in
-      *utf*) subcp_conv_from="UTF8";;
-      *iso*) subcp_conv_from="ISO-8859-2";;
-      *ascii*) subcp_conv_to="";;
-      *) subcp_conv_from="WINDOWS-1250";;
+  read enctype < <(file \
+    --brief \
+    --mime-encoding \
+    --exclude apptype \
+    --exclude tokens \
+    --exclude cdf \
+    --exclude compress \
+    --exclude elf \
+    --exclude soft \
+    --exclude tar \
+    -- "${subfile}")
+
+  if [ "$?" = "0" ] && [ -n "$enctype" ]; then
+    case "${enctype,,}" in
+      *utf*) from="UTF8";;
+      *iso*) from="ISO-8859-2";;
+      *ascii*) to= ;;
+      *) from="WINDOWS-1250";;
     esac
   else
-    subcp_conv_to=""
-    subcp_conv_from=""
+    to= from=
   fi
 
   # PORÓWNYWANIE STRON KODOWYCH I ZAPIS
-  if [ "$subcp_conv_to" != "$subcp_conv_from" ]; then
+  if [ "$from" != "$to" ]; then
     # Tworzenie kopii zapasowa oryginału
     local subftmp="$CACHE/_${md5}_${napi}.subcp.tmp"
     if ! cp \
@@ -1284,8 +1305,8 @@ subcp_convert() {
 
     # Konwertowanie
     "$BIN_iconv" \
-      -f "$subcp_conv_from" \
-      -t "$subcp_conv_to" > "$subftmp" 2> /dev/null < "$subfile" \
+      -f "$from" \
+      -t "$to" > "$subftmp" 2> /dev/null < "$subfile" \
     && cp \
       --remove-destination \
       --no-target-directory \
