@@ -808,10 +808,10 @@ napi_poll__fork_hash() {
     test "$md5sum" != "$napisum" \
       || get_hash "${files[$c]}"
 
-    echo "$? $c $md5sum $napisum" >&$NB_queue_hash
+    echo "$? $c $md5sum $napisum"
   done
 
-  echo bye >&$NB_queue_hash
+  echo bye
 }
 
 napi_poll__fork_download() {
@@ -826,10 +826,10 @@ napi_poll__fork_download() {
     sub_download "${childARG[@]}"
     childARG[0]=$?
 
-    echo "${childARG[@]}" >&$NB_queue_download
-  done <&$NB_queue_hash
+    echo "${childARG[@]}"
+  done
 
-  echo bye >&$NB_queue_download
+  echo bye
 }
 
 napi_poll() {
@@ -850,15 +850,17 @@ napi_poll() {
   exec {NB_queue_hash}<>"$CACHE/hash.fifo" \
        {NB_queue_download}<>"$CACHE/download.fifo"
 
-  napi_poll__fork_hash      & NB_childPID+=($!)
-  napi_poll__fork_download  & NB_childPID+=($!)
+  # subprocesy
+  napi_poll__fork_hash 1>&$NB_queue_hash     & NB_childPID+=($!)
+  napi_poll__fork_download \
+    0<&$NB_queue_hash 1>&$NB_queue_download  & NB_childPID+=($!)
 
   local ext
   local -a childARG
 
   validate_auth
 
-  while read -a childARG; do
+  while read -u $NB_queue_download -a childARG; do
     test "${childARG[0]}" = "bye" && break
 
     if [ "${childARG[0]}" = "0" ]; then
@@ -878,7 +880,11 @@ napi_poll() {
     fi
 
     napi_msg "${childARG[1]}" "${childARG[0]}"
-  done <&$NB_queue_download
+  done
+
+  # Zamykanie fifo fd
+  exec {NB_queue_hash}>&- {NB_queue_download}>&-
+  unset NB_queue_hash NB_queue_download
 
   trap 'NB_USERBREAK=1; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
 }
