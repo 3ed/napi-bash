@@ -284,6 +284,9 @@ ARGV() {
 
   setup_var_filesize
 
+  # Sprawdzanie poprawności hasła o ile wł. logowanie
+  validate_auth
+
   # TODO: zostawić tylko listę w wersji x.51 lub nowszej
   local v videoext_array=0
 
@@ -818,8 +821,6 @@ napi_poll__fork_download() {
   local ret=0
   local -a childARG
 
-  enabled "$auth_login" || unset napi_nick napi_pass
-
   while read -a childARG; do
     test "${childARG[0]}" = "bye" && break
 
@@ -857,8 +858,6 @@ napi_poll() {
 
   local ext
   local -a childARG
-
-  validate_auth
 
   while read -u $NB_queue_download -a childARG; do
     test "${childARG[0]}" = "bye" && break
@@ -1397,10 +1396,18 @@ uri_encode() {
 }
 
 validate_auth() {
-  enabled "$auth_login" || return 0
+  if enabled "$auth_login"; then
+    # obsługa starego sposóbu (bez uri_encode) lub
+    # funkcja została już wcześniej wykonana...
+    test -n "$napi_nick" -a -n "$napi_pass" && return 0
+  else
+    # logowanie jest wyłączone
+    unset napi_nick napi_pass
+    return 0
+  fi
 
-  local auth_status="Zły login lub hasło..."
-  local uri_encode_ret
+  local auth_status="Zły login lub hasło"
+  local uri_encode_ret auth_status_file
 
   if [ -n "$auth_nick" -a -n "$auth_pass" ] \
     && uri_encode "$auth_nick" \
@@ -1410,8 +1417,11 @@ validate_auth() {
   then
     local url="http://www.napiprojekt.pl/users_check.php?nick=$napi_nick&pswd=$napi_pass"
 
-    if downloader "$url" "$CACHE/auth_status.txt"; then
-      read auth_status < "$CACHE/auth_status.txt"
+    read auth_status_file < <(mktemp -u -p "$NB_CACHEDIR" auth_stat.$$.XXXX)
+
+    if downloader "$url" "$auth_status_file"; then
+      read auth_status < "$auth_status_file"
+      unlink "$auth_status_file"
       test "$auth_status" = "ok" && return 0
     fi
   fi
