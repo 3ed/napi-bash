@@ -177,6 +177,18 @@ is_function() {
   declare -F "$1" &> /dev/null
 }
 
+copyfile() {
+  case "$OSTYPE" in
+    linux-gnu) cp \
+         --remove-destination \
+         --no-target-directory \
+         --dereference \
+         -- "$subftmp" "$subfile" &> /dev/null
+    ;;
+    *) cp -f "$subftmp" "$subfile" &> /dev/null
+  esac
+}
+
 #-------------------------------------------------------------------------------
 #  Obsługa argumentów, wyszkiwanie i badanie plików..
 #-------------------------------------------------------------------------------
@@ -490,9 +502,15 @@ generate_files__file() {
 early() {
   test -t 1 || colors=0
 
+  early__check_bash_ver || return 1
   early__debug "$@"
 }
-
+early__check_bash_ver() {
+ if [ "${BASH_VERSINFO[0]}" -lt "4" ] || [ "${BASH_VERSINFO[1]}" -lt "1" ]; then
+   error "Zaktualizuj swój bash do wersji 4.1 lub nowszej..."
+   return 1
+ fi
+}
 early__debug() {
   local opt
 
@@ -1239,11 +1257,7 @@ subfmt_convert() {
   case "$subostat" in
     'Done')
       test -f "$subftmp" \
-        && cp \
-          --remove-destination \
-          --no-target-directory \
-          --dereference \
-          -- "$subftmp" "$subfile" &> /dev/null \
+        && copyfile "$subftmp" "$subfile" &> /dev/null \
         && unlink "$subftmp" \
         || return 101
       ;;
@@ -1302,12 +1316,7 @@ subcp_convert() {
   if [ "$from" != "$to" ]; then
     # Tworzenie kopii zapasowa oryginału
     local subftmp="$CACHE/_${md5}_${napi}.subcp.tmp"
-    if ! cp \
-        --remove-destination \
-        --no-target-directory \
-        --dereference \
-        -- "$subfile" "$subftmp" &> /dev/null
-    then
+    if ! copyfile "$subfile" "$subftmp" &> /dev/null; then
       test -f "$subftmp" && unlink "$subftmp"
       return 102
     fi
@@ -1316,11 +1325,7 @@ subcp_convert() {
     "$BIN_iconv" \
       -f "$from" \
       -t "$to" > "$subftmp" 2> /dev/null < "$subfile" \
-    && cp \
-      --remove-destination \
-      --no-target-directory \
-      --dereference \
-      -- "$subftmp" "$subfile" &> /dev/null
+    && copyfile "$subftmp" "$subfile" &> /dev/null
 
     # SPrzątanie
     local ret=$?
@@ -1334,10 +1339,15 @@ subcp_convert() {
 subeol_convert() {
   local md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
+  local SED_BIN="sed"
+
+  case "$OSTYPE" in
+    darwin*) SED_BIN="gsed"
+  esac
 
   case "${subeol_conv,,}" in
-    u*|l*) sed -r 's/\r?$//g'   -i "$subfile";;
-    d*|c*) sed -r 's/\r?$/\r/g' -i "$subfile";;
+    u*|l*) $SED_BIN 's/\r$|$//'   -i "$subfile";;
+    d*|c*) $SED_BIN 's/\r$|$/\r/' -i "$subfile";;
   esac || true
 }
 
@@ -1360,12 +1370,7 @@ sub_install() {
   fi
 
   # INSTALACJA PLIKU (I GDY PLIK JEST PUSTY)
-  if ! cp \
-    --preserve=timestamps \
-    --remove-destination \
-    --no-target-directory \
-    --dereference \
-    -- "$from" "$to" &> /dev/null; then
+  if ! copyfile "$from" "$to" &> /dev/null; then
     if [ -f "$to" ]; then
       unlink "$to"
       return 3
@@ -1560,7 +1565,7 @@ findbin() {
 #  Główny kod / main()
 #-------------------------------------------------------------------------------
 main() {
-  early "$@"
+  early "$@" || return 1
   ARGV "$@" || return 1
   napi_poll
   napi_raport
