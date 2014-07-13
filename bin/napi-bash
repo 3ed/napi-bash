@@ -834,22 +834,24 @@ napi_poll__fork_download() {
 }
 
 napi_poll() {
+  local CACHE
   read CACHE < <(mktemp -u -d -p "$NB_CACHEDIR" $$.XXXX)
-  mkdir -p "$CACHE"
+  mkdir -p "$CACHE" || return 1
   NB_USERBREAK=0
-
-  # Obsługa sygnałów / czyszczenie
-  trap 'kill ${NB_childPID[@]} &> /dev/null; rm -rf "$CACHE"' EXIT
-  trap 'NB_USERBREAK=1; kill ${NB_childPID[@]} &> /dev/null; echo bye >&$NB_queue_download; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
 
 # Tworzenie fifo (kolejka: "pierwszy wchodzi, pierwszy wychodzi")
 # do komunikacji pomiędzy forkiem a rodzicem
   # tworzenie fifo
   mkfifo "$CACHE/hash.fifo" "$CACHE/download.fifo"
 
+  local NB_queue_hash NB_queue_download
   # otwieranie fifo fd
   exec {NB_queue_hash}<>"$CACHE/hash.fifo" \
        {NB_queue_download}<>"$CACHE/download.fifo"
+
+  # Obsługa sygnałów / czyszczenie
+  trap 'kill ${NB_childPID[@]} &> /dev/null; rm -rf "$CACHE"' EXIT
+  trap 'NB_USERBREAK=1; kill ${NB_childPID[@]} &> /dev/null; echo bye >&$NB_queue_download; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
 
   # subprocesy
   napi_poll__fork_hash 1>&$NB_queue_hash     & NB_childPID+=($!)
@@ -883,9 +885,8 @@ napi_poll() {
 
   # Zamykanie fifo fd
   exec {NB_queue_hash}>&- {NB_queue_download}>&-
-  unset NB_queue_hash NB_queue_download
 
-  trap 'NB_USERBREAK=1; echo -ne "\n*** Przerwane przez użytkownika ***\n"' SIGINT
+  trap - SIGINT
 }
 
 
@@ -1114,8 +1115,11 @@ subfmt_convert__fmt_detect() {
 
   fmt_detect_ret=
 
+  local NB_FD_FILE
+  exec {NB_FD_FILE}<"$file"
+
   # szybsze od subotage.sh o ok 10 do 300 razy... Wykrywa te same formaty.
-  while read line; do
+  while read -u $NB_FD_FILE line; do
     c+=1; test "$c" -gt "$max_lines" && break
 
     case "${line:0:1}" in
@@ -1152,7 +1156,9 @@ subfmt_convert__fmt_detect() {
             fi
         esac
     esac
-  done < "$file"
+  done
+
+  exec {NB_FD_FILE}>&-
 
   # fallback - tak na wszelki wypadek, nigdy nic nie wiadomo...
   if [ -z "$fmt_detect_ret" ] && [ -n "$BIN_subotage" ]; then
