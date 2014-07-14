@@ -13,44 +13,62 @@ ${XDG_CONFIG_HOME}/napi-bash/config
 .PP
 Program załaduje ten plik jako część swojego kodu, nadpisując zdefiniowanymi w nim domyślne opcje i niektóre funkcje..
 .fi
-.SH OPCJE KONFIGURACYJNE
-.SS
-.nf
-suboverwrite, skipifexist, colors, subext, subext_autodetect, subext-prefix, subfmt_conv, subcp_conv, subeol_conv, auth_nick, auth_pass, auth_login
-.fi
-.TS
-tab(#);
-|l|l|.
-_
-\fBOpcja konfiguracji\fR:#\fBArgument polecenia\fR:
-=
-suboverwrite=*#-o=*, --suboverwrite=*
-_
-skipifexist=*#-s=*, --skipifexist=*
-_
-colors=*#-c=*, --colors=*
-_
-subext=*#-x=*, --subext=*
-_
-subext_autodetect=*#-X=*, --subext-autodetect=*
-_
-subext-prefix=*#-P=*, --subext-prefix=*
-_
-subfmt_conv=*#-F=*, --subfmt-conv=*
-_
-subcp_conv=*#-C=*, --subcp-conv=*
-_
-subeol_conv=*#-E=*, --subeol-conv=*
-_
-auth_nick=*#-n=*, --nick=*
-_
-auth_pass=*#-p=*, --pass=*
-_
-auth_login=*#-L=*, --login=*
-_
-.TE
-Patrz:
+.SH OPCJE KONFIGURACYJNE (WSPÓLNE)
+Wszytskie tu wymienione opcje zostały już opisane w:
 .BR napi-bash (1)
+.SS suboverwrite=<tekst>
+.PP
+To samo co: -o=<tekst>, --suboverwrite=<tekst>
+.fi
+.SS skipifexist=<bool>
+.PP
+To samo co: -s=<bool>, --skipifexist=<bool>
+.fi
+.SS colors=<bool>
+.PP
+To samo co: -c=<bool>, --colors=<bool>
+.fi
+.SS subext=<tekst>
+.PP
+To samo co: -x=<tekst>, --subext=<tekst>
+.fi
+.SS subext_autodetect=<bool>
+.PP
+To samo co: -X=<bool>, --subext-autodetect=<bool>
+.fi
+.SS subext-prefix=<tekst>
+.PP
+To samo co: -P=<tekst>, --subext-prefix=<tekst>
+.fi
+.SS subfmt_conv=<tekst>
+.PP
+To samo co: -F=<tekst>, --subfmt-conv=<tekst>
+.fi
+.SS subcp_conv=<tekst>
+.PP
+To samo co: -C=<tekst>, --subcp-conv=<tekst>
+.fi
+.SS subeol_conv=<tekst>
+.PP
+To samo co: -E=<tekst>, --subeol-conv=<tekst>
+.fi
+.SS auth_nick=<tekst>
+.PP
+To samo co: -n=<tekst>, --nick=<tekst>
+.fi
+.SS auth_pass=<tekst>
+.PP
+To samo co: -p=<tekst>, --pass=<tekst>
+.fi
+.SS auth_login=<bool>
+.PP
+To samo co: -L=<bool>, --login=<bool>
+.fi
+.SS notifications=<bool>
+.PP
+To samo co: -N=<bool>, --notifications=<bool>
+.fi
+.SH OPCJE KONFIGURACYJNE (TYLKO PLIK)
 .SS subfmt_ext[Format]="Rozszerzenie"
 .PP
 Opcja umożliwia zmianę domyślnego rozszerzenia formatu. Domyślne rozszerzenia dla obsługiwanych formatów:
@@ -214,17 +232,88 @@ gui_int_warn="tak"
 \fB%9\fR domyślny kolory czcionki.
 .fi
 .fi
-\".SH ZAAWANSOWANE OPCJE KONFIGURACYJNE
-\".B Modyfikujesz na własną odpowiedzialność!
-\".SS gui_msg_fmt="gui_xml"
-\".SS cli_msg_fmt="cli_esc"
-\".SS gui_raport_fmt="gui_xml"
-\".SS cli_raport_fmt="cli_esc"
-\"Domyślne moduły parsowania tagów formatowania tekstu. użytkownik może stworzyć własne. Należy pamiętać że aby nie tworzyć konfliktów z modułami parsowania tagów informacji, powinno się używać tylko następujących tagów: %b, %i, %u, %B, %I, %U, %R, %[0-9]. Aby napisać inny format, stwórz funkcję fill_fields__fmt_nowy_format i nadpisz zmienną, np: gui_msg_fmt="nowy_format".
-\".SS gui_msg() {}  [przestarzałe]
-\"Jeżeli użytkownik chce podmienić libnotify na np. zenity, może to zrobić nadpisująć tą funkcję swoją własną. Pierwszy parametr to typ czyli [0-255] lub "raport". Drugi parametr to treść.
-\".SS custom_raport_msg() {}  [przestarzałe]
-\" Za pomocą tej funkcji użytkownik może podmienić treść raportu na np. bardziej treściwy niż jest to możliwe przy użyciu zmiennej `msg_raport'. Gdyby jednak twoja funkcja nie działała prawidłowo to po return większym niż 0, tekst nie zostanie nadpisany. Kombinajca z gui_msg powinna dać interesujące możliwości. Podstawowe zmienne to $files (nazwy plików), $file_stat (ich status).
+.SH ZAAWANSOWANE OPCJE KONFIGURACYJNE (TYLKO PLIK)
+.SS fps_detect_mpv_version="WERSJA"
+.PP
+Obecnie obsługiwane wersje to: „0.3”, „0.4”.
+.fi
+.SS fps_detect_tools=(<lista>)
+.PP
+Lista obsługiwanych detektorów fps. Domyślnie:
+.RS 4
+.nf
+fps_detect_tools=(ffprobe mediainfo mplayer mpv)
+.fi
+.RE
+.fi
+.PP
+Programy muszą mieć fukcję pomocniczą o nazwie:
+.RS 4
+.nf
+subfmt_convert__fps__${nazwa_programu//[^[:alnum:]]/_}
+.fi
+.RE
+.fi
+.PP
+Funkcja powinna zwracać poprawny fps w zmiennej \fB$fps_sub\fR, nie powinna pisać na STDOUT, dodatkowo jest czuła na return inny niż 0. Dostępne zmienne: \fB$bin\fR - lokalizacja programu, \fB$file\fR - lokalizacja pliku wideo.
+.fi
+.SS notifications_tools=(<lista>)
+.PP
+Lista obsługiwanych programów służących do wyświetlania powiadomień systemowych... Domyślnie:
+.RS 4
+.nf
+notifications_tools=(notify-send terminal-notifier growlnotify)
+.fi
+.RE
+.fi
+.PP
+Programy muszą mieć funkcję pomocniczą o nazwie:
+.RS 4
+.nf
+gui_msg__${nazwa_programu//[^[:alnum]]/_}
+.fi
+.RE
+.fi
+.PP
+Funkcja zawiera zmienne \fB$type\fR i \fB$msg\fR, gdzie \fB$type\fR może zawierać: „0”-„255”, „raport”, „warn”, „error”.
+.fi
+.PP
+Przykład \fBgui_msg__*\fR dla \fBzenity\fR:
+.fi
+.RS 4
+.nf
+gui_msg__zenity() {
+  case "$type" in
+    raport) zenity --info --text="$msg"
+  esac
+}
+.fi
+.RE
+.SS
+.nf
+gui_msg_fmt="Moduł", cli_msg_fmt="Moduł", gui_raport_fmt="Moduł", cli_raport_fmt="Moduł"
+.fi
+.PP
+Ustawianie modułu przetwarzania tagów dla wiadomości tekstowych. Domyślnie:
+.RS 4
+.nf
+gui_msg_fmt="gui_xml"
+cli_msg_fmt="cli_esc"
+gui_raport_fmt="gui_xml"
+cli_raport_fmt="cli_esc"
+.fi
+.RE
+.fi
+.PP
+Moduł to inaczej funkcja pomocnicza, dla nowego modułu należy stworzyć następującą funkcję:
+.RS 4
+.nf
+fill_fields__fmt__${nazwa_modułu//[^[:alnum:]]/_}
+.fi
+.RE
+.fi
+.PP
+Funkcja zawiera tablicę \fB$NB_FIELDS_SUB\fR, którą można dowolnie modyfikować (ustawiona jako local w funkji rodzicu). Zawiera też zmienną \fB$fill_fields_ret\fR gdzie powinno być doklejane wszystko co powinno być wyświetlone... Zmienna \fB$1\fR zawiera tag (bez znaku procenta).
 .SH PRZYKŁAD
 .nf
 # Format subrip, kodowanie windows-cp1250, koniec linii dos/windows:

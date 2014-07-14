@@ -27,6 +27,7 @@ suboverwrite=nie
 subskipifexist=nie
 subretry_restore=nie
 subretry_store=nie
+notifications=tak
 colors=tak
 videoext_match=dir
 videoext=(.{3gp,avi,asf,divx,m{4,k,o}v,mp{4,e,eg,g},ogg,ogv,rmvb,wmv,qt})
@@ -57,17 +58,27 @@ cli_raport_fmt="cli_esc"
 fps_detect_mpv_version="0.4" #CHANGEME#
 
 fps_detect_tools=(ffprobe mediainfo mplayer mpv)
+notifications_tools=(notify-send terminal-notifier growlnotify)
 
-gui_msg() {
-  # 1 = type
-  # 2 = msg
-  if [ "$1" = "raport" ]; then
-    notify-send -c "transfer.complite" -t 5000 -i "text-x-generic" "napi-bash" "$2"
-  elif [ "$1" = "0" ]; then
-    notify-send -c "transfer" -t 5000 -i "info" "napi-bash" "$2"
-  else
-    notify-send -c "transfer.error" -t 5000 -i "dialog-warning" "napi-bash: problem" "$2"
-  fi
+gui_msg__notify_send() {
+  case "$type" in
+    raport) notify-send -c "transfer.complite" -t 5000 -i "text-x-generic" "napi-bash" "$msg";;
+    0) notify-send -c "transfer" -t 5000 -i "info" "napi-bash" "$msg";;
+    *) notify-send -c "transfer.error" -t 5000 -i "dialog-warning" "napi-bash: problem" "$msg"
+  esac
+}
+gui_msg__terminal_notifier() {
+  case "$type" in
+    raport) terminal-notifier -title 'napi-bash' -message "$msg";;
+    0) terminal-notifier -title 'napi-bash' -message "$msg";;
+    *) terminal-notifier -title 'napi-bash: problem' -message "$msg"
+  esac
+}
+gui_msg__growlnotify() {
+  case "$type" in
+    raport|0) growlnotify "napi-bash" -m "$msg";;
+    *) growlnotify "napi-bash: problem" -m "$msg"
+  esac
 }
 
 custom_raport() {
@@ -140,14 +151,14 @@ warn() {
   local print_msg_fmt_ret
   print_msg_fmt "0;33;1" "Uwaga:" "0" "$1" \
     && printfo STDERR "$print_msg_fmt_ret"
-  test -n "$DISPLAY" && enabled "$gui_int_warn" && gui_msg "warn" "$1" &> /dev/null &
+  enabled "$gui_int_warn" && gui_msg "warn" "$1" &> /dev/null &
   return 1
 }
 error() {
   local print_msg_fmt_ret
   print_msg_fmt "0;31;1" "Błąd:" "0" "$1" \
     && printfo STDERR "$print_msg_fmt_ret"
-  test -n "$DISPLAY" && gui_msg "error" "$1" &> /dev/null &
+  gui_msg "error" "$1" &> /dev/null &
   return 1
 }
 print_msg_fmt() {
@@ -171,6 +182,13 @@ printfo() {
   fi
 
   printf "$@" >&$t
+}
+
+gui_msg() {
+  local type="$1" msg="$2"
+
+  is_function "gui_msg__$notifications_system" \
+    && "gui_msg__$notifications_system"
 }
 
 is_function() {
@@ -252,6 +270,9 @@ Opcje:
       Loguj się podanym wcześniej nickiem i hasłem.
       (ustawione: %s)
 
+  -N=<bool>, --notifications=<bool>
+      Wł/wył notyfikacje pulpitowe. (ustawione: %s)
+
   --debug=<plik>
       Tryb debugowy
 
@@ -273,7 +294,7 @@ Napi-bash opublikowano na licencji GPL3:
     "$subext" "$subext_autodetect" "$subext_prefix" \
     "$subfmt_conv" "$subcp_conv" "$subeol_conv" \
     "$auth_nick" "${auth_pass:+"***"}" "$auth_login" \
-    "${config:-"$NB_CONFIGDIR/config"}"
+    "$notifications" "${config:-"$NB_CONFIGDIR/config"}"
 
 #  -r=<bool>, --subretry-restore=<bool> [szkic/koncepcja]
 #      Wznawia pobierania wcześniej zakończone niepowodzeniem,
@@ -288,11 +309,15 @@ ARGV() {
   ARGV__getopts "$@" || return 1
 
   # niezbędny:
-  setup_bin_7z || return 1
+  setup_bin_7z \
+    && setup_bin_realpath \
+    || return 1
 
   # opjonalne:
   setup_bin_iconv
   setup_bin_subotage
+
+  setup_notification
 
   setup_var_filesize
 
@@ -336,6 +361,8 @@ ARGV__getopts() {
         ARGV__bool "$opt"; colors="$bool_ret";;
       -X=*|--subext-autodetect=*|--subext-autodetect|--no-subext-autodetect)
         ARGV__bool "$opt"; subext_autodetect="$bool_ret";;
+      -N=*|--notifications=*|--notifications|--no-notifications)
+        ARGV__bool "$opt"; notifications="$bool_ret";;
 #      -r=*|--subretry-restore=*|--subretry-restore|--no-subretry-restore)
 #        ARGV__bool "$opt"; subretry_restore="$bool_ret";;
       -F=*|--subfmt-conv=*) subfmt_conv="${opt#*=}" ;;
@@ -544,9 +571,7 @@ early__debug() {
 #-------------------------------------------------------------------------------
 ##### "enable" checker #####
 napi_msg__enabled__gui() {
-  if [ "$DISPLAY" = "" ]; then
-    return 1
-  fi
+  test -n "$notifications_system" || return 1
 
   if [ "$1" = "raport" ]; then
     enabled "$raport_gui_enabled" && return 0 || return 1
@@ -592,7 +617,7 @@ fill_fields() {
     fi
   done
 
-  fill_fields__fmt_$fmt "R"
+  fill_fields__fmt__$fmt "R"
 
   #RETURNVAR: $fill_fields_ret
 }
@@ -604,7 +629,7 @@ fill_fields__ini_msg() {
     d) fill_fields_ret+="$3";;
     e) fill_fields_ret+="$4";;
     %) fill_fields_ret+="%";;
-    *) fill_fields__fmt_$1 "$2"
+    *) fill_fields__fmt__$1 "$2"
   esac
 }
 fill_fields__ini_raport() {
@@ -619,12 +644,12 @@ fill_fields__ini_raport() {
     n) fill_fields_ret+="$n";;
     a) fill_fields_ret+="$a";;
     %) fill_fields_ret+="%";;
-    *) fill_fields__fmt_$1 "$2"
+    *) fill_fields__fmt__$1 "$2"
   esac
 }
 
 # format fields (formating output)
-fill_fields__fmt_cli_esc() {
+fill_fields__fmt__cli_esc() {
   enabled "$colors" || return
 
   case "$1" in
@@ -642,7 +667,7 @@ fill_fields__fmt_cli_esc() {
 
   fill_fields_ret+="\e[0${NB_FIELDS_SUB[1]}${NB_FIELDS_SUB[2]}${NB_FIELDS_SUB[3]}${NB_FIELDS_SUB[0]}m"
 }
-fill_fields__fmt_gui_xml() {
+fill_fields__fmt__gui_xml() {
   local c
   case "$1" in
     b|i|u)
@@ -1029,7 +1054,6 @@ sub_download() {
 }
 
 subfmt_convert__fps__mplayer() {
-  local bin="$1" file="$2"
   fps_sub=
   local output="$("$bin" \
     -really-quiet \
@@ -1044,7 +1068,6 @@ subfmt_convert__fps__mplayer() {
 }
 
 subfmt_convert__fps__mpv() {
-  local bin="$1" file="$2"
   fps_sub=
 
   local -a args
@@ -1073,7 +1096,6 @@ subfmt_convert__fps__mpv() {
 }
 
 subfmt_convert__fps__mediainfo() {
-  local bin="$1" file="$2"
   read fps_sub < <("$bin" --Output='Video;%FrameRate%' -- "$file")
   #RETURNVAR: $fps_sub
 }
@@ -1111,13 +1133,13 @@ subfmt_convert__fps() {
   test "${#BIN_subotage__fps_f[@]}" = "0" && return 1
 
   local fid="$1" LANG=C
-  local i b f fps_sub
+  local i bin func fps_sub file="${files[$fid]}"
 
   for ((i=0; i <= ${#BIN_subotage__fps_f[@]}; i++)); do
-    b="${BIN_subotage__fps_b[i]}"
-    f="${BIN_subotage__fps_f[i]}"
+    bin="${BIN_subotage__fps_b[i]}"
+    func="${BIN_subotage__fps_f[i]}"
     # subfmt_convert__fps__* ustawiają zmianną fps
-    subfmt_convert__fps__$f "$b" "${files[$fid]}" \
+    subfmt_convert__fps__$func \
       && [ -n "$fps_sub" ] \
       && printf -v fps_ret "%.3f" "$fps_sub" \
       && return 0
@@ -1337,17 +1359,25 @@ subcp_convert() {
 }
 
 subeol_convert() {
+  test -n "$subeol_conv" || return 0
+
   local md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
-  local SED_BIN="sed"
 
   case "$OSTYPE" in
-    darwin*) SED_BIN="gsed"
-  esac
-
-  case "${subeol_conv,,}" in
-    u*|l*) $SED_BIN 's/\r$|$//'   -i "$subfile";;
-    d*|c*) $SED_BIN 's/\r$|$/\r/' -i "$subfile";;
+    linux*|cygwin)
+      case "${subeol_conv,,}" in
+        u*|l*) sed -r 's/\r?$//'   -i "$subfile";;
+        d*|c*) sed -r 's/\r?$/\r/' -i "$subfile";;
+      esac
+      ;;
+    *)
+      # ech... co za szmelc...
+      case "${subeol_conv,,}" in
+        u*|l*) sed -E 's/\'$'\r''?$//'         "$subfile" -i '.remove_me';;
+        d*|c*) sed -E 's/\'$'\r''?$/\'$'\r''/' "$subfile" -i '.remove_me';;
+      esac
+      test -f "${subfile}.remove_me" && unlink "${subfile}.remove_me"
   esac || true
 }
 
@@ -1443,6 +1473,27 @@ validate_auth() {
   return 1
 }
 
+setup_notification() {
+  if enabled "$notifications"; then
+    test -n "$notifications_system" && return 0
+  else
+    unset notifications_system
+  fi
+
+  local findbin_ret
+
+  case "$OSTYPE" in
+    linux*|bsd*|solaris*) test -n "$DISPLAY" || return 0
+  esac
+
+  for i in "${notifications_tools[@]}"; do
+    findbin "$i" \
+      && notifications_system="${i//[^[:alnum:]]/_}" \
+      && return 0
+  done
+  return 1
+}
+
 setup_var_sublang() { #TODO
   test -n "$sublang" || return 0
   local uri_encode_ret
@@ -1535,12 +1586,20 @@ setup_bin_subotage__fps() {
   fi
 }
 
+setup_bin_realpath() {
+  local findbin_ret
+  if ! findbin realpath; then
+    warn "Aby mieć pewność że program zawsze prawidłowo rozwinie ścieżki dla plików, zainstaluj: realpath"
+    realpath() { shift; test "${1:0:1}" = "/" && echo "$1" || echo "$PWD/$1"; }
+  fi
+}
+
 setup_bin_7z() {
   local findbin_ret
   if findbin 7za 7z; then
     BIN_7z="$findbin_ret"
   else
-    error "Aby móc rozpakować archiwum z napisami zainstaluj p7zip..."
+    error "Aby móc rozpakować archiwum z napisami, zainstaluj: p7zip..."
   fi
   #RETURNVAR: BIN_7z
 }
