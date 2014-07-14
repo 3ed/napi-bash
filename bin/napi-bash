@@ -183,9 +183,9 @@ copyfile() {
          --remove-destination \
          --no-target-directory \
          --dereference \
-         -- "$subftmp" "$subfile" &> /dev/null
+         -- "$1" "$2" &> /dev/null
     ;;
-    *) cp -f "$subftmp" "$subfile" &> /dev/null
+    *) cp -f "$1" "$2" &> /dev/null
   esac
 }
 
