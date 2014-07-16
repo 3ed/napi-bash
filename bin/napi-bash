@@ -81,10 +81,6 @@ gui_msg__growlnotify() {
   esac
 }
 
-custom_raport() {
-  return 1
-}
-
 enabled() {
   case "${1,,}" in
     0|-|f*|n*|wy*|of*|"") false
@@ -316,6 +312,7 @@ ARGV() {
   # opjonalne:
   setup_bin_iconv
   setup_bin_subotage
+  setup_bin_dos2unix
 
   setup_notification
 
@@ -323,18 +320,6 @@ ARGV() {
 
   # Sprawdzanie poprawności hasła o ile wł. logowanie
   validate_auth
-
-  # TODO: zostawić tylko listę w wersji x.51 lub nowszej
-  local v videoext_array=0
-
-  if v="$(declare -p videoext 2>/dev/null)"; then
-    case "$v" in
-      "declare -a videoext="*|"typeset -a videoext="*) videoext_array=1;;
-    esac
-  fi
-
-  test "$videoext_array" = "1" \
-    || warn "Zaktualizuj opcję videoext do nowszej wersji..."
 
   msg "Generowanie listy plików"
 
@@ -447,21 +432,13 @@ test_filesize() {
 }
 
 test_videoext() {
-  local file="$1"
+  local file="${1,,}" i
 
-  # TODO: zostawić tylko listę w wersji x.51 lub nowszej
-  if [ "$videoext_array" = "0" ]; then
-    local ext="${file##*.}"
-
-    [[ "${ext,,}" =~ $videoext ]] && return 0
-  else
-    local i n
-
-    for i in "${videoext[@]}"; do
-      n="${file:${#file}-${#i}}"
-      test "$n" = "$i" && return 0
-    done
-  fi
+  for i in "${videoext[@]}"; do
+    case "${file}" in
+      *"$i") return 0
+    esac
+  done
 
   return 1
 }
@@ -472,7 +449,12 @@ generate_files() {
   # Pliki/katalogi..
   for i in "${@}"; do
     test -n "$i" || continue
-    read realpath < <(realpath -- "$i")
+
+    if [ -n "$BIN_realpath" ]; then
+      read realpath < <(realpath -- "$i")
+    else
+      realpath="$i"
+    fi
 
     if [ -d "$realpath" ]; then
       generate_files__dir_recursively "$realpath"
@@ -752,11 +734,7 @@ napi_msg_cli() {
   fi
 }
 napi_raport() {
-  local msg
-
-  if ! msg="$(custom_raport)"; then
-    msg="${msg_raport:-"Łącznie pobrano %i/%a napisów..."}"
-  fi
+  local msg="${msg_raport:-"Łącznie pobrano %i/%a napisów..."}"
 
   napi_raport_cli "$msg"
   napi_raport_gui "$msg"
@@ -1359,26 +1337,12 @@ subcp_convert() {
 }
 
 subeol_convert() {
-  test -n "$subeol_conv" || return 0
+  test -n "$subeol_conv" -a -n "$BIN_dos2unix" || return 0
 
   local md5="$3" napi="$4"
   local subfile="$CACHE/_${md5}_${napi}.sub"
 
-  case "$OSTYPE" in
-    linux*|cygwin)
-      case "${subeol_conv,,}" in
-        u*|l*) sed -r 's/\r?$//'   -i "$subfile";;
-        d*|c*) sed -r 's/\r?$/\r/' -i "$subfile";;
-      esac
-      ;;
-    *)
-      # ech... co za szmelc...
-      case "${subeol_conv,,}" in
-        u*|l*) sed -E 's/\'$'\r''?$//'         "$subfile" -i '.remove_me';;
-        d*|c*) sed -E 's/\'$'\r''?$/\'$'\r''/' "$subfile" -i '.remove_me';;
-      esac
-      test -f "${subfile}.remove_me" && unlink "${subfile}.remove_me"
-  esac || true
+  "$BIN_dos2unix" --quiet "$subfile" &> /dev/null
 }
 
 sub_install() {
@@ -1586,12 +1550,57 @@ setup_bin_subotage__fps() {
   fi
 }
 
-setup_bin_realpath() {
+setup_bin_dos2unix() {
+  test -n "$subeol_conv"  || return 0
+  test -n "$BIN_dos2unix" && return 0
+
   local findbin_ret
-  if ! findbin realpath; then
-    warn "Aby mieć pewność że program zawsze prawidłowo rozwinie ścieżki dla plików, zainstaluj: realpath"
-    realpath() { shift; test "${1:0:1}" = "/" && echo "$1" || echo "$PWD/$1"; }
+
+  case "${subeol_conv,,}" in
+    u*|l*) findbin dos2unix;;
+    d*|c*) findbin unix2dos;;
+    *)
+      unset subeol_conv
+      warn "Nieprawidłowa wartość dla opcji subeol_conv"
+      return 1
+  esac
+
+  BIN_dos2unix="$findbin_ret"
+
+  if [ -z "$BIN_dos2unix" ]; then
+    unset BIN_dos2unix subeol_conv
+    warn "Aby móc konwertować znak końca linii, zainstaluj: dos2unix"
+    return 1
   fi
+}
+
+setup_bin_perl() {
+  test -n "$BIN_perl" && return 0
+
+  local findbin_ret
+  if findbin perl; then
+    BIN_perl="${BIN_perl:-"$findbin_ret"}"
+    return 0
+  fi
+
+  return 1
+}
+
+setup_bin_realpath() {
+  test -n "$BIN_realpath" && return 0
+  local findbin_ret
+  if findbin realpath; then
+    BIN_realpath="$findbin_ret"
+  elif setup_bin_perl; then
+    BIN_realpath=realpath
+    realpath() { perl -MCwd -e 'print Cwd::abs_path shift' "$@"; }
+  else
+    #warn ", zainstaluj: realpath lub perl"
+    subretry_store=nie
+    subretry_restore=nie
+    return 1
+  fi
+  return 0
 }
 
 setup_bin_7z() {
