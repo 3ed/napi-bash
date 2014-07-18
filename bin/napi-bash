@@ -1209,7 +1209,7 @@ subfmt_convert() {
   local output fmt_detect_ret i fps_ret fps_opts
 
   # Detekcja (potrzebne dla obu: subext_autodetect i subfmt_conv)
-  subfmt_convert__fmt_detect "$subfile" || return 100
+  subfmt_convert__fmt_detect "$subfile" >&2 || return 100
   enabled "$subext_autodetect" && ext="${subfmt_ext[$fmt_detect_ret]}"
 
   # Zatrzymaj tutaj jeśli nie ustawiono subfmt_conv
@@ -1224,7 +1224,7 @@ subfmt_convert() {
 
   # Wczytywanie FPS dla konwersji z/do microdvd
   if [ -n "$fps_opts" ]; then
-    if ! subfmt_convert__fps "$fid"; then
+    if ! subfmt_convert__fps "$fid" >&2; then
       return 101
     fi
   fi

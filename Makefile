@@ -23,10 +23,6 @@ define MAKE_USAGE_DEFINITION
 # DESTDIR
 #   Domyslnie:
 #   Ustawione: $(DESTDIR)
-
-# MPV_VERSION
-#   Domyślnie: 0.4
-#   Ustawione: $(MPV_VERSION)
 endef
 
 export MAKE_USAGE_DEFINITION PREFIX MANPREFIX DESTDIR COMP_ZSH COMP_BASH
