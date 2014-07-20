@@ -593,13 +593,13 @@ fill_fields() {
     ch="${msg:c:1}"
     if [ "$ch" = "%" ]; then
       let c++
-      fill_fields__ini_$ini "$fmt" "${msg:c:1}" "$@"
+      fill_fields__ini_$ini "$fmt" "${msg:c:1}" "$@" >&2
     else
       fill_fields_ret+="$ch"
     fi
   done
 
-  fill_fields__fmt__$fmt "R"
+  fill_fields__fmt__$fmt "R" >&2
 
   #RETURNVAR: $fill_fields_ret
 }
@@ -1614,18 +1614,15 @@ setup_bin_7z() {
 }
 
 findbin() {
-  local line
   findbin_ret=
+
   while [ -n "$1" ]; do
-    while read -d: line; do
-      if [ -x "$line/$1" ]; then
-        findbin_ret="$line/$1"
-        return 0
-      fi
-    done <<< "$PATH"
+    hash "$1" &> /dev/null && findbin_ret="$1" && return 0
     shift
   done
+
   return 1
+
   #RETURNVAR: $findbin_ret
 }
 

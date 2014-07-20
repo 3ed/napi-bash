@@ -305,15 +305,23 @@ cli_raport_fmt="cli_esc"
 .RE
 .fi
 .PP
-Moduł to inaczej funkcja pomocnicza, dla nowego modułu należy stworzyć następującą funkcję:
+Moduł to inaczej funkcja pomocnicza, dla nowego modułu należy stworzyć następujące funkcje:
 .RS 4
 .nf
-fill_fields__fmt__${nazwa_modułu//[^[:alnum:]]/_}
+.B fill_fields__fmt__${nazwa_modułu//[^[:alnum:]]/_}
 .fi
+.RS 4
+Funkcja służy do dekodowania uniwersalnych tagów na tagi formatu. Do dyspozycji jest tablica \fB$NB_FIELDS_SUB\fR i zmienna \fB$fill_fields_ret\fR (obie są ustawione jako lokalne w funkcji rodzicu). Pierwsza zmienna służy jako brudnopis, druga to zawartość z informacją końcową. Funckja otrzymuje tag jako pierwszy parametr.
 .RE
 .fi
 .PP
-Funkcja zawiera tablicę \fB$NB_FIELDS_SUB\fR, którą można dowolnie modyfikować (ustawiona jako local w funkji rodzicu). Zawiera też zmienną \fB$fill_fields_ret\fR gdzie powinno być doklejane wszystko co powinno być wyświetlone... Zmienna \fB$1\fR zawiera tag (bez znaku procenta).
+.nf
+.B fill_fields__esc__${nazwa_modułu//[^[:alnum:]]/_} # w przygotowaniu
+.fi
+.RS 4
+Funkcja służy do przekształcenia fragmentów tekstu, które zawierają znaki szczególne dla formatowania ale nie pochodzą one z konwersji uniwersalnego tagu. Do tego celu wystarczy wczytać dane z \fB$fill_fields_esc_sub\fR i nadpisać ją zmodyfikowaną jej wersją. Przykład konwersji dla xml: nazwa pliku zawiera: „flip & flap.avi”, a powinna: „flip &amp; flap.avi”.
+.RE
+.fi
 .SH PRZYKŁAD
 .nf
 # Format subrip, kodowanie windows-cp1250, koniec linii dos/windows:
