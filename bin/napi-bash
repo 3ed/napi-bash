@@ -1,7 +1,7 @@
 #!/bin/bash
 shopt -s extglob
 
-NB_VERSION="0.51"
+NB_VERSION="1.0"
 NB_CONFIGDIR="${NB_CONFIGDIR:-"${XDG_CONFIG_HOME:-"${HOME}/.config"}/napi-bash"}"
 NB_CACHEDIR="${NB_CACHEDIR:-"${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/"}"
 NB_CONFIG="${NB_CONFIG:-"$NB_CONFIGDIR/config"}"
