@@ -236,7 +236,7 @@ gui_int_warn="tak"
 .SS Tagi xml:
 .PP
 .nf
-\fB%file-uri\fR klikalny link uruchamiający plik w domyślnym programie systemowym
+\fB%file-uri\fR link uruchamiający plik w domyślnym programie systemowym
 .fi
 .fi
 .SH ZAAWANSOWANE OPCJE KONFIGURACYJNE (TYLKO PLIK)
@@ -254,7 +254,7 @@ fps_detect_tools=(ffprobe mediainfo mplayer mpv)
 .RE
 .fi
 .PP
-Programy muszą mieć fukcję pomocniczą o nazwie:
+Programy muszą mieć funkcję pomocniczą o nazwie:
 .RS 4
 .nf
 subfmt_convert__fps__${nazwa_programu//[^[:alnum:]]/_}
@@ -317,7 +317,7 @@ Format jest funkcją pomocniczą przetwarzającą tagi, dla nowego formatu nale�
 .B fill_fields__fmt__${nazwa_programu//[^[:alnum:]]/_}
 .fi
 .RS 4
-Funkcja służy do dekodowania uniwersalnych tagów na tagi formatu. Do dyspozycji jest tablica \fB$local_array\fR i zmienna \fB$return_str\fR (obie są ustawione jako lokalne w funkcji rodzicu). Pierwsza zmienna służy jako brudnopis, druga to zawartość z informacją końcową. Funckja otrzymuje tag jako pierwszy parametr czyli \fB$1\fR.
+Funkcja służy do dekodowania uniwersalnych tagów na tagi formatu. Do dyspozycji jest tablica \fB$local_array\fR i zmienna \fB$return_str\fR (obie są ustawione jako lokalne w funkcji rodzicu). Pierwsza zmienna służy jako brudnopis, druga to zawartość z informacją końcową. Funkcja otrzymuje tag jako pierwszy parametr czyli \fB$1\fR.
 .RE
 .fi
 .PP
