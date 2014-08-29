@@ -198,6 +198,7 @@ gui_int_warn="tak"
 .RE
 .fi
 .SH TAGI
+\fBUwaga:\fR Można je łączyć w grupy np: \fB%{file-uri:f}\fR - w przypadku gdy ten pierwszy nie jest znany, zostanie użyty następny i gdy zostanie podany dodatkowy to jeszcze następny, itd...
 .SS Tagi dla msg_raport:
 .PP
 .nf
@@ -230,6 +231,12 @@ gui_int_warn="tak"
 \fB%7\fR kolor biały,
 \fB%8\fR domyślny kolory czcionki,
 \fB%9\fR domyślny kolory czcionki.
+.fi
+.fi
+.SS Tagi xml:
+.PP
+.nf
+\fB%file-uri\fR klikalny link uruchamiający plik w domyślnym programie systemowym
 .fi
 .fi
 .SH ZAAWANSOWANE OPCJE KONFIGURACYJNE (TYLKO PLIK)
@@ -291,35 +298,34 @@ gui_msg__zenity() {
 .RE
 .SS
 .nf
-gui_msg_fmt="Moduł", cli_msg_fmt="Moduł", gui_raport_fmt="Moduł", cli_raport_fmt="Moduł"
+notifications_fmt["Nazwa programu"]="Format"
 .fi
 .PP
-Ustawianie modułu przetwarzania tagów dla wiadomości tekstowych. Domyślnie:
+Ustawianie \fBFormatu\fR dla \fBNazwy programu\fR. Patrz: \fBnotifications_tools\fR. Domyślnie:
 .RS 4
 .nf
-gui_msg_fmt="gui_xml"
-cli_msg_fmt="cli_esc"
-gui_raport_fmt="gui_xml"
-cli_raport_fmt="cli_esc"
+notifications_fmt[notify-send]="xml"
+notifications_fmt[terminal-notifier]="plain"
+notifications_fmt[growlnotify]="plain"
 .fi
 .RE
 .fi
 .PP
-Moduł to inaczej funkcja pomocnicza, dla nowego modułu należy stworzyć następujące funkcje:
+Format jest funkcją pomocniczą przetwarzającą tagi, dla nowego formatu należy stworzyć następujące funkcje:
 .RS 4
 .nf
-.B fill_fields__fmt__${nazwa_modułu//[^[:alnum:]]/_}
+.B fill_fields__fmt__${nazwa_programu//[^[:alnum:]]/_}
 .fi
 .RS 4
-Funkcja służy do dekodowania uniwersalnych tagów na tagi formatu. Do dyspozycji jest tablica \fB$NB_FIELDS_SUB\fR i zmienna \fB$fill_fields_ret\fR (obie są ustawione jako lokalne w funkcji rodzicu). Pierwsza zmienna służy jako brudnopis, druga to zawartość z informacją końcową. Funckja otrzymuje tag jako pierwszy parametr.
+Funkcja służy do dekodowania uniwersalnych tagów na tagi formatu. Do dyspozycji jest tablica \fB$local_array\fR i zmienna \fB$return_str\fR (obie są ustawione jako lokalne w funkcji rodzicu). Pierwsza zmienna służy jako brudnopis, druga to zawartość z informacją końcową. Funckja otrzymuje tag jako pierwszy parametr czyli \fB$1\fR.
 .RE
 .fi
 .PP
 .nf
-.B fill_fields__esc__${nazwa_modułu//[^[:alnum:]]/_} # w przygotowaniu
+.B fill_fields__esc__${nazwa_programu//[^[:alnum:]]/_}
 .fi
 .RS 4
-Funkcja służy do przekształcenia fragmentów tekstu, które zawierają znaki szczególne dla formatowania ale nie pochodzą one z konwersji uniwersalnego tagu. Do tego celu wystarczy wczytać dane z \fB$fill_fields_esc_sub\fR i nadpisać ją zmodyfikowaną jej wersją. Przykład konwersji dla xml: nazwa pliku zawiera: „flip & flap.avi”, a powinna: „flip &amp; flap.avi”.
+Funkcja służy do przekształcenia fragmentów tekstu, które zawierają znaki szczególne dla formatowania ale nie pochodzą one z konwersji uniwersalnego tagu. Do tego celu wystarczy wczytać dane z \fB$1\fR i zwrócić w \fB$return_str\fR. Przykład konwersji dla xml: nazwa pliku zawiera: „flip & flap.avi”, a powinna: „flip &amp; flap.avi”.
 .RE
 .fi
 .SH PRZYKŁAD

@@ -7,7 +7,7 @@ NB_CACHEDIR="${NB_CACHEDIR:-"${XDG_CACHE_HOME:-"${HOME}/.cache"}/napi-bash/"}"
 NB_CONFIG="${NB_CONFIG:-"$NB_CONFIGDIR/config"}"
 
 declare -a files hashes
-declare -A subfmt_ext
+declare -A subfmt_ext notifications_fmt
 
 subfmt_ext[fab]=txt
 subfmt_ext[microdvd]=sub
@@ -51,16 +51,15 @@ raport_gui_enabled=tak
 raport_cli_enabled=tak
 gui_int_warn=tak
 
-gui_msg_fmt="gui_xml"
-cli_msg_fmt="cli_esc"
-gui_raport_fmt="gui_xml"
-cli_raport_fmt="cli_esc"
-
 # obsługiwane wersje to: "0.3", "0.4"
-fps_detect_mpv_version="0.4" #CHANGEME#
-
+fps_detect_mpv_version="0.4"
 fps_detect_tools=(ffprobe mediainfo mplayer mpv)
+
 notifications_tools=(notify-send terminal-notifier growlnotify)
+notifications_fmt[notify-send]="xml"
+notifications_fmt[terminal-notifier]="plain"
+notifications_fmt[growlnotify]="plain"
+
 
 gui_msg__notify_send() {
   case "$type" in
@@ -185,8 +184,8 @@ printfo() {
 gui_msg() {
   local type="$1" msg="$2"
 
-  is_function "gui_msg__$notifications_system" \
-    && "gui_msg__$notifications_system"
+  is_function "gui_msg__$NB_notify_tool" \
+    && "gui_msg__$NB_notify_tool"
 }
 
 is_function() {
@@ -559,7 +558,7 @@ early__debug() {
 #-------------------------------------------------------------------------------
 ##### "enable" checker #####
 napi_msg__enabled__gui() {
-  test -n "$notifications_system" || return 1
+  test -n "$NB_notify_tool" || return 1
 
   if [ "$1" = "raport" ]; then
     enabled "$raport_gui_enabled" && return 0 || return 1
@@ -593,7 +592,7 @@ fill_fields() {
   shift 5
 
   if [ "$NB__fmt" = "gui" ]; then
-    NB__fmt="${notifications_fmt[$notifications_system]:-"xml"}" # TODO plain
+    NB__fmt="$NB_notify_fmt"
   fi
 
   fill_fields_ret=
@@ -668,9 +667,12 @@ fill_fields__esc() {
   return_str=
 
   # TODO według notyfierów - tablica assocjacyjna
-  is_function fill_fields__esc__$NB__fmt \
-    && fill_fields__esc__$NB__fmt "$1" >&2 \
-    || return 1
+  if is_function fill_fields__esc__$NB__fmt; then
+    fill_fields__esc__$NB__fmt "$1" >&2 \
+      || return 1
+  else
+    return_str="$1"
+  fi
 
   test -n "$return_str"
 }
@@ -1560,9 +1562,9 @@ validate_auth() {
 
 setup_notification() {
   if enabled "$notifications"; then
-    test -n "$notifications_system" && return 0
+    test -n "$NB_notify_tool" && return 0
   else
-    unset notifications_system
+    unset NB_notify_tool NB_notify_fmt
   fi
 
   local findbin_ret
@@ -1573,7 +1575,8 @@ setup_notification() {
 
   for i in "${notifications_tools[@]}"; do
     findbin "$i" \
-      && notifications_system="${i//[^[:alnum:]]/_}" \
+      && NB_notify_tool="${i//[^[:alnum:]]/_}" \
+      && NB_notify_fmt="${notifications_fmt[$i]:-"plain"}" \
       && return 0
   done
   return 1
