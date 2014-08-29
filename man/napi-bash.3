@@ -7,23 +7,36 @@ Przeprogramowywanie napi-bash lub używanie jako biblioteki dla zewnętrznego pr
 To dopiero wczesna wersja przed-rozwojowa, w każdej chwili mogą nastąpić zmiany...
 .SH SKŁADNIA
 .SS Bash (bezpośrednio)
+.nf
 source /usr/bin/napi-bash
-.br
-moja_main() {
-.br
-  local -a files
-.br
-  if get_ARGV__generate_files "/plik" "/folder/"; then
-.br
-    napi_poll
-.br
-  fi
-.br
-  ini_raport # lub np: xml_raport
-.br
+
+moja_funkcja() {
+  usage
 }
+
+moja_funkcja
+.fi
 .SS Perl
-TODO
+.nf
+use IPC::Open3;
+
+my $cmd = <<EOF
+source /usr/bin/napi-bash
+
+moja_funkcja() {
+  usage
+}
+
+moja_funkcja
+EOF
+
+my $pid = open3(
+    \\*IN, \\*OUT, \\*ERR,
+    'bash <<< "' . $cmd . '"'
+);
+
+print while (<OUT>)
+.fi
 .SS Python
 TODO
 .SS C
