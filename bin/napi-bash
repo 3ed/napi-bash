@@ -692,6 +692,8 @@ fill_fields__fmt() {
 fill_fields__tag__msg() {
   case "$1" in
     f) fill_fields__esc "${files[$file_id]##*/}";;
+    path) fill_fields__esc "${files[$file_id]}";;
+    dir) fill_fields__esc "${files[$file_id]%/*}";;
     d) fill_fields__esc "$file_id";;
     e) fill_fields__esc "$error_id";;
     *) fill_fields__fmt "$1"
