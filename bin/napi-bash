@@ -1183,11 +1183,11 @@ subfmt_convert__fps__mpv() {
   local msg="::NAPI-BASH::FPS=" line
 
   case "$fps_detect_mpv_version" in
-    0.3)
+    0.3*)
       args=("--playing-msg=$msg\${=fps}" --vo=null
       --ao=null --frames=1 --quiet --no-cache --no-config)
       ;;
-    0.4)
+    0.[4-6]*)
       args=("--term-playing-msg=$msg\${=fps}" --vo=null
       --ao=null --frames=1 --quiet --no-cache --no-config)
       ;;
