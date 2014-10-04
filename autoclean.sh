@@ -1,9 +1,9 @@
 #!/bin/bash
-printf -- "Running autoclean.sh..."
+printf -- "Running autoclean.sh...\n"
 
-if [ "$0" != "./autoclean.sh" ] && [ "$0" != "autoclean.sh" ]; then
+if [ "$0" != "./autoclean.sh" ]; then
   printf -- "  Program can be runned only inside project folder...\n"
-  printf -- "  To do that run: „./autoclean.sh” or „bash autoclean.sh”\n"
+  printf -- "  To do that run: „./autoclean.sh”\n"
   exit 1
 fi
 
