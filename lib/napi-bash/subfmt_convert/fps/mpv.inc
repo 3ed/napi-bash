@@ -1,5 +1,4 @@
 fps_detect_tools+=(mpv)
-fps_detect_mpv_version="0.6"
 
 subfmt_convert__fps__mpv() {
   fps_sub=
@@ -12,7 +11,7 @@ subfmt_convert__fps__mpv() {
       args=("--playing-msg=$msg\${=fps}" --vo=null
       --ao=null --frames=1 --quiet --no-cache --no-config)
       ;;
-    0.[4-6]*)
+    ""|0.[4-6]*)
       args=("--term-playing-msg=$msg\${=fps}" --vo=null
       --ao=null --frames=1 --quiet --no-cache --no-config)
       ;;
