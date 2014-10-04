@@ -51,37 +51,6 @@ raport_gui_enabled=tak
 raport_cli_enabled=tak
 gui_int_warn=tak
 
-# obsługiwane wersje to: "0.3", "0.4"
-fps_detect_mpv_version="0.4"
-fps_detect_tools=(ffprobe mediainfo mplayer mpv)
-
-notifications_tools=(notify-send terminal-notifier growlnotify)
-notifications_fmt[notify-send]="xml"
-notifications_fmt[terminal-notifier]="plain"
-notifications_fmt[growlnotify]="plain"
-
-
-gui_msg__notify_send() {
-  case "$type" in
-    raport) notify-send -c "transfer.complite" -t 5000 -i "text-x-generic" -- "napi-bash" "$msg";;
-    0) notify-send -c "transfer" -t 5000 -i "info" -- "napi-bash" "$msg";;
-    *) notify-send -c "transfer.error" -t 5000 -i "dialog-warning" -- "napi-bash: ostrzeżenie" "$msg"
-  esac
-}
-gui_msg__terminal_notifier() {
-  case "$type" in
-    raport) terminal-notifier -title 'napi-bash' -message "$msg";;
-    0) terminal-notifier -title 'napi-bash' -message "$msg";;
-    *) terminal-notifier -title 'napi-bash: ostrzeżenie' -message "$msg"
-  esac
-}
-gui_msg__growlnotify() {
-  case "$type" in
-    raport|0) growlnotify "napi-bash" -m "$msg";;
-    *) growlnotify "napi-bash: ostrzeżenie" -m "$msg"
-  esac
-}
-
 enabled() {
   case "${1,,}" in
     0|-|f*|n*|wy*|of*|"") false
@@ -121,6 +90,38 @@ load_config() {
 alias exit=return
 load_config "$@"
 unalias exit
+
+if [[ "$0" =~ / ]]; then
+  read NB_basebin < <(realpath -- "$0")
+else
+  if hash "$0" &> /dev/null; then
+    read NB_basebin < <(hash -t "$0")
+  else
+    if [ -f "./$0" ]; then
+      read NB_basebin < <(realpath -- "./$0")
+    fi
+  fi
+fi
+
+if [ -z "$NB_basebin" ]; then
+  NB_basebin=/usr/bin
+else
+  read NB_basebin < <(dirname -- "$NB_basebin")
+fi
+
+plugin() {
+  # TODO $NB_plugin_${1//[^[:alnum]]/_}+=(name)
+  if [ -d "$NB_basebin/../lib/napi-bash/$1" ]; then
+    for i in "$NB_basebin/../lib/napi-bash/$1/"*.inc; do
+      source "$i"
+    done
+  elif [ -f "$NB_basebin/../lib/napi-bash/$1" ]; then
+    source "$NB_basebin/../lib/napi-bash/$1"
+  else
+    return 1
+  fi
+  return 0
+}
 
 #-------------------------------------------------------------------------------
 #  Podstawowe funkcje..
@@ -180,6 +181,8 @@ printfo() {
 
   printf -- "$@" >&$t
 }
+
+plugin gui_msg
 
 gui_msg() {
   local type="$1" msg="$2"
@@ -714,92 +717,7 @@ fill_fields__tag__raport() {
   esac || return 1
 }
 
-# escape characters from nontag part
-fill_fields__esc__cli() {
-  return_str="${1//\\/\\\\}"
-}
-fill_fields__esc__xml() {
-  return_str="${1//&/&amp;}"
-  return_str="${return_str//\"/&quot;}"
-  return_str="${return_str//\'/&apos;}"
-  return_str="${return_str//>/&gt;}"
-  return_str="${return_str//</&lt;}"
-}
-
-# format fields (formating output)
-fill_fields__fmt__cli() {
-  enabled "$colors" || return
-
-  case "$1" in
-    '%') return_str="%"; return 0;;
-    [0-7]) local_array[0]=";3$1";;
-    'b') local_array[1]=";1";;
-    'i') local_array[2]=";3";;
-    'u') local_array[3]=";4";;
-    [8-9]) unset local_array[0];;
-    'B') unset local_array[1];;
-    'I') unset local_array[2];;
-    'U') unset local_array[3];;
-    'R') local i; for i in {0..3}; do unset local_array[$i]; done;;
-    *) return 1;;
-  esac
-
-  return_str="\e[0${local_array[1]}${local_array[2]}${local_array[3]}${local_array[0]}m"
-}
-fill_fields__fmt__xml() {
-  local c
-  case "$1" in
-    '%') return_str="%";;
-    'b'|'i'|'u')
-      local canset=1
-      for ((c=0; $c < ${#local_array[0]}; c++)); do
-        test "${local_array[0]:$c:1}" = "$1" && canset=0
-      done
-      test "$canset" = "1" || return
-      return_str="<$1>" && local_array[0]+="$1"
-    ;;
-    'B'|'I'|'U')
-      local stupidxml_left="" stupidxml_right="" stupidxml_tag="" canunset=0 new_GUIFMT=""
-      for ((c=0; $c < ${#local_array[0]}; c++)); do
-        stupidxml_tag="${local_array[0]:$c:1}"
-        if [ "$stupidxml_tag" = "${1,}" ]; then
-          canunset=1
-        else
-          new_GUIFMT="$stupidxml_tag"
-          stupidxml_right+="<$stupidxml_tag>"
-        fi
-      done
-      test "$canunset" = "1" || return
-
-      for ((c=$[${#local_array[0]}-1]; $c >= 0; c--)); do
-        stupidxml_left+="</${local_array[0]:$c:1}>"
-      done
-
-      local_array[0]="$new_GUIFMT"
-
-      return_str="$stupidxml_left$stupidxml_right"
-    ;;
-    'R')
-      return_str=
-      for ((c=$[${#local_array[0]}-1]; $c >= 0; c--)); do
-        return_str+="</${local_array[0]:$c:1}>"
-        echo "--- ${local_array[0]:$c:1}"
-      done
-      unset local_array[0]
-    ;;
-    'file-uri')
-      local file="${files[$file_id]}"
-      fill_fields__esc "${file##*/}"
-
-      local uri_encode_ret
-      test "${file:0:1}" = "/" || file="$PWD/$file"
-      uri_encode "$file"
-
-      return_str='<a href="file://'"$uri_encode_ret"'">'"$return_str"'</a>'
-    ;;
-    *) return 1;;
-  esac
-}
+plugin fill_fields
 
 ##### main message functions #####
 napi_msg() {
@@ -1162,80 +1080,7 @@ sub_download() {
   return 0
 }
 
-subfmt_convert__fps__mplayer() {
-  fps_sub=
-  local output="$("$bin" \
-    -really-quiet \
-    -vo null \
-    -ao null \
-    -frames 1 \
-    -identify \
-    -- "$file" 2> /dev/null)" \
-    && [[ "$output" =~ 'ID_VIDEO_FPS='([0-9.]*) ]] \
-    && fps_sub="${BASH_REMATCH[1]}"
-  #RETURNVAR: $fps_sub
-}
-
-subfmt_convert__fps__mpv() {
-  fps_sub=
-
-  local -a args
-  local msg="::NAPI-BASH::FPS=" line
-
-  case "$fps_detect_mpv_version" in
-    0.3*)
-      args=("--playing-msg=$msg\${=fps}" --vo=null
-      --ao=null --frames=1 --quiet --no-cache --no-config)
-      ;;
-    0.[4-6]*)
-      args=("--term-playing-msg=$msg\${=fps}" --vo=null
-      --ao=null --frames=1 --quiet --no-cache --no-config)
-      ;;
-    *) return 1
-  esac
-
-  # notka: ten test robi za returna
-  while read line; do
-    test "${line:0:${#msg}}" = "$msg" \
-      && fps_sub="${line:${#msg}}" \
-      && break
-  done < <("$bin" "${args[@]}" -- "$file" 2>&1)
-
-  #RETURNVAR: $fps_sub
-}
-
-subfmt_convert__fps__mediainfo() {
-  read fps_sub < <("$bin" --Output='Video;%FrameRate%' -- "$file")
-  #RETURNVAR: $fps_sub
-}
-
-subfmt_convert__fps__ffprobe() {
-  fps_sub=
-  if [ -z "$BIN_bc" ]; then
-    local findbin_ret
-    findbin bc && BIN_bc="$findbin_ret" || return 1
-  fi
-
-  local bin="$1" file="$2" i
-  local -a fps
-  IFS=, read -a fps < <("$bin" \
-      -v 0 \
-      -select_streams v \
-      -print_format csv \
-      -show_entries stream=avg_frame_rate,r_frame_rate \
-      -- "$file") \
-    && [ "${#fps[@]}" = "3" ] \
-    || return 1
-
-  for i in 1 2; do
-    if [ "${fps[i]}" != "0/0" ]; then
-      read fps_sub < <("$BIN_bc" <<< "scale=3;${fps[i]}") && return 0
-    fi
-  done
-
-  return 1
-  #RETURNVAR: $fps_sub $BIN_bc
-}
+plugin subfmt_convert/fps
 
 subfmt_convert__fps() {
   fps_ret=

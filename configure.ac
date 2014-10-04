@@ -40,6 +40,7 @@ AM_COND_IF([found_realpath],,[AC_MSG_ERROR([required program realpath not found.
 
 AC_CONFIG_FILES([Makefile
                  bin/Makefile
+                 lib/Makefile
                  completion/Makefile
                  man/Makefile])
 AC_OUTPUT
