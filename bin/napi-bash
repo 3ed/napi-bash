@@ -213,7 +213,7 @@ copyfile() {
 usage() {
   local nb_name="${0##*/}"
 
-  printf -- '%s wersja %s | 3ED <krzysztof1987@gmail.com>\n' "$nb_name" "$NB_VERSION"
+  printf -- 'napi-bash wersja %s | 3ED <krzysztof1987@gmail.com>\n' "$NB_VERSION"
 
   printf -- '
 Użycie:
