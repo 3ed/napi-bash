@@ -1,4 +1,3 @@
-notifications_tools+=(growlnotify)
 notifications_fmt[growlnotify]="plain" # correct me if I wrong
 
 gui_msg__growlnotify() {

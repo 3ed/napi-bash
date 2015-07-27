@@ -1,4 +1,4 @@
-fps_detect_tools+=(ffprobe)
+fps_detect_tools_reg ffprobe
 
 subfmt_convert__fps__ffprobe() {
   fps_sub=

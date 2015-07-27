@@ -1,4 +1,4 @@
-fps_detect_tools+=(mpv)
+fps_detect_tools_reg mpv
 
 subfmt_convert__fps__mpv() {
   fps_sub=

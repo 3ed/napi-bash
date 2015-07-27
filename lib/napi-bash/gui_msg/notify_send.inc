@@ -1,4 +1,3 @@
-notifications_tools+=(notify-send)
 notifications_fmt[notify-send]="xml"
 
 gui_msg__notify_send() {

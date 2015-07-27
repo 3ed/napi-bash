@@ -51,6 +51,8 @@ raport_gui_enabled=tak
 raport_cli_enabled=tak
 gui_int_warn=tak
 
+#notifications_tools=(notify-send growlnotify terminal-notifier)
+
 enabled() {
   case "${1,,}" in
     0|-|f*|n*|wy*|of*|"") false
@@ -122,7 +124,15 @@ plugin() {
   fi
   return 0
 }
-
+fps_detect_tools_reg() {
+  local i
+  if [ "${#fps_detect_tools[@]}" != 0 ]; then
+    for i in "${fps_detect_tools[@]}"; do
+      test "$1" = "$i" && return
+    done
+  fi
+  fps_detect_tools+=($1)
+}
 #-------------------------------------------------------------------------------
 #  Podstawowe funkcje..
 #-------------------------------------------------------------------------------
@@ -929,6 +939,7 @@ napi_poll() {
 
   local ext
   local -a childARG
+  local -i ret=0
 
   while read -u $NB_queue_download -a childARG; do
     test "${childARG[0]}" = "bye" && break
@@ -948,6 +959,7 @@ napi_poll() {
       childARG[0]=$?
     elif [ "${childARG[0]}" -lt "100" ]; then
       subretry_store "${childARG[@]}"
+      ret=1
     fi
 
     napi_msg "${childARG[1]}" "${childARG[0]}"
@@ -957,6 +969,8 @@ napi_poll() {
   exec {NB_queue_hash}>&- {NB_queue_download}>&-
 
   trap - SIGINT
+
+  return $ret
 }
 
 
@@ -1420,6 +1434,10 @@ setup_notification() {
     linux*|bsd*|solaris*) test -n "$DISPLAY" || return 0
   esac
 
+  if [ "${#notifications_tools[@]}" = "0" ]; then
+    notifications_tools=(${!notifications_fmt[@]})
+  fi
+
   for i in "${notifications_tools[@]}"; do
     findbin "$i" \
       && NB_notify_tool="${i//[^[:alnum:]]/_}" \
@@ -1601,10 +1619,12 @@ findbin() {
 #  Główny kod / main()
 #-------------------------------------------------------------------------------
 main() {
+  local -i ret=0
   early "$@" || return 1
   ARGV "$@" || return 1
-  napi_poll
+  napi_poll || ret=2
   napi_raport
+  exit $ret
 }
 
 # Nie wykonuj funkcji main, gdy użyty przez source

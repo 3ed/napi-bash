@@ -45,7 +45,6 @@ fill_fields__fmt__xml() {
       return_str=
       for ((c=$[${#local_array[0]}-1]; $c >= 0; c--)); do
         return_str+="</${local_array[0]:$c:1}>"
-        echo "--- ${local_array[0]:$c:1}"
       done
       unset local_array[0]
     ;;

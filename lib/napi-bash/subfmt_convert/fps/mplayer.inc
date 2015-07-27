@@ -1,4 +1,4 @@
-fps_detect_tools+=(mplayer)
+fps_detect_tools_reg mplayer
 
 subfmt_convert__fps__mplayer() {
   fps_sub=

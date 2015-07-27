@@ -1,4 +1,3 @@
-notifications_tools+=(terminal-notifier)
 notifications_fmt[terminal-notifier]="plain" # correct me if I wrong
 
 gui_msg__terminal_notifier() {
