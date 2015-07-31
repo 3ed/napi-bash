@@ -12,9 +12,9 @@
 - findutils 
 
 # Instalacja
-  ./autogen.sh
-  ./configure --prefix=/usr
-  make install
+    ./autogen.sh
+    ./configure --prefix=/usr
+    make install
 
 # Deinstalacja
-  make uninstall
+    make uninstall
