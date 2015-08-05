@@ -1,20 +1,22 @@
-# Wymagania instalacyjne
+### Wymagania instalacyjne
 
-## Wymagane zależności dla instalacji:
-- automake
-- autoconf
+- Wymagane zależności dla instalacji:
+  - autoconf
+  - automake
+  - make
+- Wymagane zależności dla programu:
+  - bash >= 4.1
+  - curl
+  - p7zip
+  - coreutils
+  - findutils 
 
-## Wymagane zależności:
-- bash >= 4.1
-- curl (można zmienić)
-- p7zip
-- coreutils
-- findutils 
+### Instalacja
 
-# Instalacja
     ./autogen.sh
     ./configure --prefix=/usr
     make install
 
-# Deinstalacja
+### Deinstalacja
+
     make uninstall
