@@ -1305,6 +1305,16 @@ subcp_convert() {
       return 102
     fi
 
+    # Usuwanie BOM z UTF8 w celu zapobieżenia:
+    # "iconv: błędna sekwencja wejściowa na pozycji 0"
+    # https://github.com/3ed/napi-bash/issues/6
+    if [ "$from" = "UTF8" ]; then
+		awk \
+		  '{if(NR==1)sub(/^\xef\xbb\xbf/,"");print}' \
+		  "$subfile" > "$subftmp" 2> /dev/null \
+		&& copyfile "$subftmp" "$subfile" &> /dev/null
+	fi
+
     # Konwertowanie
     "$BIN_iconv" \
       -f "$from" \
