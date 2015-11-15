@@ -1482,6 +1482,8 @@ setup_bin_iconv() {
   test -n "$subcp_conv" || return 0
 
   case "${subcp_conv,,}" in
+    u*32*) subcp_conv="UTF32";;
+    u*16*) subcp_conv="UTF16";;
     u*) subcp_conv="UTF8";;
     i*) subcp_conv="ISO-8859-2";;
     w*) subcp_conv="WINDOWS-1250";;
