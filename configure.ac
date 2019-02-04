@@ -14,7 +14,7 @@ AC_CHECK_PROG([found_bash], [bash], [yes], [no])
 AM_CONDITIONAL([found_bash], [test "x$found_bash" != xno])
 AM_COND_IF([found_bash],,[AC_MSG_ERROR([required program „bash” not found.])])
 
-AM_CONDITIONAL([bash_minver], [bash <<< 'test -n "${BASH_VERSINFO@<:@0@:>@}" && test "${BASH_VERSINFO@<:@0@:>@}" -ge "4" && test "${BASH_VERSINFO@<:@1@:>@}" -ge "1"'])
+AM_CONDITIONAL([bash_minver], [bash <<< 'if @<:@ -n "${BASH_VERSINFO@<:@0@:>@}" @:>@; then if @<:@ "${BASH_VERSINFO@<:@0@:>@}" -lt "4" @:>@ ||  @<:@ "${BASH_VERSINFO@<:@0@:>@}" -eq "4" -a "${BASH_VERSINFO@<:@1@:>@}" -lt "1" @:>@; then exit 1; fi; else exit 1; fi; exit 0'])
 AM_COND_IF([bash_minver],,[AC_MSG_ERROR([required: bash >= 4.1])])
 
 AC_CHECK_PROGS([found_coreutils], [dd md5sum], [no])
